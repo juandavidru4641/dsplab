@@ -1215,10 +1215,10 @@ const LLMPane: React.FC<LLMPaneProps> = ({
             if (isFinalizing) break;
             } else {
             // STALL DETECTION: Auto-nudge if only text was returned
-            addDisplayMsg('system', "[STATUS] Stall detected. Nudging agent to continue...");
+            addDisplayMsg('system', "[STATUS] Stall detected. Nudging agent to maintain momentum...");
             currentConversation.push({ 
-            role: 'user', 
-            parts: [{ text: "You provided only text. PROCEED IMMEDIATELY to implement or verify. DO NOT stop until you call 'complete_task'." }] 
+              role: 'user', 
+              parts: [{ text: "You provided a text summary without calling tools. This engineering task is NOT complete. PROCEED IMMEDIATELY to implement, verify, or finalize using the 'complete_task' tool. MAINTAIN AUTONOMOUS MOMENTUM." }] 
             });
             continue;
             }      }
@@ -1265,10 +1265,28 @@ const LLMPane: React.FC<LLMPaneProps> = ({
     processAgentLoop([...messages, newUserMsg]);
   };
 
+  useEffect(() => {
+    if (messages.length === 0 && !isLoading && !isInspirationLoading) {
+      const savedMsgs = localStorage.getItem('llm_messages');
+      if (!savedMsgs || JSON.parse(savedMsgs).length === 0) {
+        addDisplayMsg('assistant', "Welcome to the Vult-O-Mat Laboratory. I am your Senior DSP Assistant. Would you like to start with a professional preset or a minimal template?", undefined, false, [
+          { label: "Load CS-80 (vs80)", value: "load_preset:vs80" },
+          { label: "Biquad Filter", value: "load_preset:Biquad Filter" },
+          { label: "Minimal Template", value: "load_preset:Minimal" }
+        ]);
+      }
+    }
+  }, [messages.length, isLoading, isInspirationLoading]);
+
   const handleChoice = (val: string) => {
     if (askUserResolverRef.current) {
       addDisplayMsg('user', `Selected: ${val}`);
       askUserResolverRef.current(val);
+    } else if (val.startsWith('load_preset:')) {
+      const name = val.split(':')[1];
+      onLoadPreset(name);
+      addDisplayMsg('user', `Action: Load Preset "${name}"`);
+      addDisplayMsg('system', `[ACTION] Loading laboratory preset: ${name}`);
     }
   };
 
@@ -1385,7 +1403,7 @@ const LLMPane: React.FC<LLMPaneProps> = ({
       )}
 
       <div style={{ height: '4px', width: '100%', background: '#000', position: 'relative', overflow: 'hidden', borderBottom: '1px solid #333' }}>
-        {isLoading && <div className="agent-scanner" />}
+        {(isLoading || isInspirationLoading) && <div className="agent-scanner" />}
       </div>
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: '12px', scrollBehavior: 'smooth' }}>
         {displayMessages.map((m) => (
