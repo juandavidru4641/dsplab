@@ -24,7 +24,8 @@ type MessagePart = {
   text?: string; 
   thought?: string; 
   functionCall?: any; 
-  functionResponse?: any 
+  functionResponse?: any;
+  thought_signature?: string;
 };
 type Message = { role: 'user' | 'model', parts: MessagePart[] };
 
@@ -450,12 +451,15 @@ const LLMPane: React.FC<LLMPaneProps> = ({
         const apiParts: any[] = [];
         if (p.thought) apiParts.push({ thought: p.thought });
         if (p.text) apiParts.push({ text: p.text });
-        if (p.functionCall) apiParts.push({ functionCall: p.functionCall });
+        if (p.functionCall) {
+          const part: any = { functionCall: p.functionCall };
+          if (p.thought_signature) part.thought_signature = p.thought_signature;
+          apiParts.push(part);
+        }
         if (p.functionResponse) apiParts.push({ functionResponse: p.functionResponse });
         if (apiParts.length === 0) return [{ text: "" }];
         return apiParts;
-      })
-    }));
+      })    }));
 
     const payload = {
       contents: mappedContents,
@@ -605,15 +609,21 @@ const LLMPane: React.FC<LLMPaneProps> = ({
                       if (!modelParts[index]) {
                         modelParts[index] = { ...part };
                       } else {
-                        // Merge incremental updates
-                        if (part.text) modelParts[index].text = (modelParts[index].text || "") + part.text;
-                        if (part.thought) modelParts[index].thought = (modelParts[index].thought || "") + part.thought;
-                        if (part.functionCall) {
-                          modelParts[index].functionCall = { 
-                            ...(modelParts[index].functionCall || {}), 
-                            ...part.functionCall 
-                          };
-                        }
+                        // Generic merge for all fields to preserve metadata like thought_signature
+                        Object.keys(part).forEach(key => {
+                          const target = modelParts[index] as any;
+                          const source = part as any;
+                          if (typeof part[key] === 'string') {
+                            target[key] = (target[key] || "") + source[key];
+                          } else if (typeof part[key] === 'object' && part[key] !== null) {
+                            target[key] = { 
+                              ...(target[key] || {}), 
+                              ...source[key] 
+                            };
+                          } else {
+                            target[key] = source[key];
+                          }
+                        });
                       }
 
                       // Update UI
