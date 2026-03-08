@@ -314,6 +314,17 @@ const LLMPane: React.FC<LLMPaneProps> = ({
         parameters: { type: "OBJECT", properties: {} }
       },
       {
+        name: "get_state",
+        description: "Retrieves the value of a specific internal variable by its key path (e.g. 'voice1.env'). Use this for precise verification.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            key: { type: "STRING", description: "The full path of the variable." }
+          },
+          required: ["key"]
+        }
+      },
+      {
         name: "get_spectrum_data",
         description: "Retrieves a snapshot of the current 1024-band frequency spectrum of the output signal. Use this to verify audio activity or filter performance.",
         parameters: { type: "OBJECT", properties: {} }
@@ -777,6 +788,7 @@ const LLMPane: React.FC<LLMPaneProps> = ({
             'load_preset': '[ACTION] Loading preset',
             'list_presets': '[RESEARCH] Browsing library',
             'get_live_telemetry': '[RESEARCH] Inspecting memory',
+            'get_state': '[RESEARCH] Reading specific state',
             'get_spectrum_data': '[RESEARCH] Analyzing spectrum',
             'get_peak_frequencies': '[RESEARCH] Finding peak frequencies',
             'get_audio_metrics': '[RESEARCH] Measuring audio quality',
@@ -928,6 +940,11 @@ const LLMPane: React.FC<LLMPaneProps> = ({
             } else if (name === 'get_live_telemetry') {
               addDisplayMsg('system', `[RESEARCH] Inspecting internal memory states`);
               result = { telemetry: getTelemetry() };
+            } else if (name === 'get_state') {
+              const key = fc.args.key;
+              const telemetry = getTelemetry();
+              addDisplayMsg('system', `[RESEARCH] Reading state: ${key}`);
+              result = { [key]: telemetry[key] !== undefined ? telemetry[key] : "Variable not found." };
             } else if (name === 'get_spectrum_data') {
               addDisplayMsg('system', `[RESEARCH] Capturing frequency spectrum snapshot`);
               result = { spectrum: getSpectrum() };

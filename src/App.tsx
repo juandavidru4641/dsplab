@@ -417,7 +417,7 @@ LABORATORY WORKFLOW:
 - Edit: Use 'apply_diff' or 'edit_lines' for surgical fixes. Use 'update_code' for rewrites.
 - History: Use 'store_snapshot' to create restore points. 
 - Test: Use 'set_knob' or 'set_multiple_knobs' to test parameter ranges. Use 'configure_sequencer' for melodies.
-- Verify: Use 'get_live_telemetry', 'get_spectrum_data', and 'get_audio_metrics' to verify signal quality.
+- Verify: Use 'get_live_telemetry' for full state, 'get_state' for specific precision verification, 'get_spectrum_data' for frequency analysis, and 'get_audio_metrics' to analyze signal quality.
 
 AUTONOMOUS EXECUTION:
 - TREAT 'write_plan' AS A STARTING ACTION, NEVER AN ENDING ACTION. You MUST implement at least one change after planning in the same turn.
