@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Square, Timer, Music, Zap, FastForward, Layers } from 'lucide-react';
+import { Play, Square, Timer, Zap, FastForward, Layers } from 'lucide-react';
 
 export interface Step {
   active: boolean;
@@ -63,8 +63,8 @@ const NoteInput: React.FC<{ value: number, onChange: (val: number) => void }> = 
       onMouseDown={onMouseDown}
       className={`note-selector-drag ${isDragging ? 'dragging' : ''}`}
       style={{
-        width: '36px', height: '20px', background: '#000', border: '1px solid #444',
-        borderRadius: '3px', color: '#00ff00', fontSize: '9px', fontWeight: 'bold',
+        width: '32px', height: '18px', background: '#000', border: '1px solid #444',
+        borderRadius: '3px', color: '#00ff00', fontSize: '8px', fontWeight: 'bold',
         display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'ns-resize',
         userSelect: 'none', transition: 'border-color 0.2s'
       }}
@@ -128,61 +128,63 @@ const Sequencer: React.FC<SequencerProps> = ({
   }, [isPlaying, bpm, steps, length]);
 
   return (
-    <div className="sequencer-container">
-      <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '8px' }}>
-        <div className="section-title" style={{ margin: 0 }}><Music size={12} /> TB-STYLE SEQUENCER</div>
-        
+    <div className="sequencer-container" style={{ padding: '5px 12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '5px' }}>
         <button 
           onClick={() => setIsPlaying(!isPlaying)}
           style={{ 
             background: isPlaying ? '#ff4444' : '#00ff00', 
-            border: 'none', borderRadius: '4px', padding: '4px 12px', 
-            color: '#000', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: '6px'
+            border: 'none', borderRadius: '4px', padding: '2px 10px', 
+            color: '#000', fontSize: '9px', fontWeight: 'bold', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: '4px'
           }}
         >
-          {isPlaying ? <Square size={10} fill="currentColor" /> : <Play size={10} fill="currentColor" />}
+          {isPlaying ? <Square size={8} fill="currentColor" /> : <Play size={8} fill="currentColor" />}
           {isPlaying ? 'STOP' : 'RUN'}
         </button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Timer size={12} color="#666" />
-          <input type="number" value={bpm} onChange={(e) => setBpm(parseInt(e.target.value))} className="bpm-input" />
-          <span style={{ fontSize: '8px', color: '#666' }}>BPM</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <Timer size={10} color="#666" />
+          <input type="number" value={bpm} onChange={(e) => setBpm(parseInt(e.target.value))} className="bpm-input" style={{ width: '35px', padding: '1px 3px', fontSize: '10px' }} />
+          <span style={{ fontSize: '7px', color: '#666' }}>BPM</span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Layers size={12} color="#666" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <Layers size={10} color="#666" />
           <input 
             type="number" min="1" max="16" value={length} 
             onChange={(e) => setLength(Math.max(1, Math.min(16, parseInt(e.target.value))))} 
             className="bpm-input" 
+            style={{ width: '30px', padding: '1px 3px', fontSize: '10px' }}
           />
-          <span style={{ fontSize: '8px', color: '#666' }}>LEN</span>
+          <span style={{ fontSize: '7px', color: '#666' }}>LEN</span>
         </div>
       </div>
 
       <div className="step-grid">
         {steps.slice(0, length).map((step, i) => (
-          <div key={i} className={`step-column ${i === currentStep ? 'current' : ''}`}>
+          <div key={i} className={`step-column ${i === currentStep ? 'current' : ''}`} style={{ padding: '2px' }}>
             <div 
               onClick={() => updateStep(i, { active: !step.active })}
               className={`step-led gate ${step.active ? 'active' : ''}`}
+              style={{ width: '18px', height: '14px' }}
             />
             <div 
               onClick={() => updateStep(i, { accent: !step.accent })}
               className={`step-led accent ${step.accent ? 'active' : ''}`}
+              style={{ width: '18px', height: '14px' }}
             >
-              <Zap size={8} color={step.accent ? "#000" : "#444"} />
+              <Zap size={6} color={step.accent ? "#000" : "#444"} />
             </div>
             <div 
               onClick={() => updateStep(i, { slide: !step.slide })}
               className={`step-led slide ${step.slide ? 'active' : ''}`}
+              style={{ width: '18px', height: '14px' }}
             >
-              <FastForward size={8} color={step.slide ? "#000" : "#444"} />
+              <FastForward size={6} color={step.slide ? "#000" : "#444"} />
             </div>
             <NoteInput value={step.note} onChange={(val) => updateStep(i, { note: val })} />
-            <div className="step-number">{i + 1}</div>
+            <div className="step-number" style={{ fontSize: '7px' }}>{i + 1}</div>
           </div>
         ))}
       </div>
