@@ -33,14 +33,14 @@ export class AudioEngine {
   private sources: InputSource[] = [];
 
   // Listeners for UI state updates
-  private stateListeners: ((state: Record<string, any>) => void)[] = [];
+  private stateListeners: ((state: Record<string, any>, probes: Record<string, number[]>) => void)[] = [];
 
   constructor() {
     this.scopeBuffer = new Float32Array(2048);
     this.spectrumBuffer = new Uint8Array(1024);
   }
 
-  public onStateUpdate(callback: (state: Record<string, any>) => void) {
+  public onStateUpdate(callback: (state: Record<string, any>, probes: Record<string, number[]>) => void) {
     this.stateListeners.push(callback);
     return () => {
       this.stateListeners = this.stateListeners.filter(l => l !== callback);
@@ -106,8 +106,10 @@ export class AudioEngine {
       this.workletNode.port.onmessage = (event) => {
         if (event.data.type === 'telemetry') {
           this.liveState = event.data.state || {};
-          // Notify listeners
-          this.stateListeners.forEach(l => l(this.liveState));
+          const probes = event.data.probes || {};
+          
+          // Notify listeners with both state and probes
+          this.stateListeners.forEach(l => l(this.liveState, probes));
           
           if (event.data.probes) {
             this.probedStates = event.data.probes;

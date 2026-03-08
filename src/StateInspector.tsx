@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, X, Activity, Edit2 } from 'lucide-react';
-
 interface StateInspectorProps {
-  onStateUpdate: (callback: (state: Record<string, any>) => void) => () => void;
+  onStateUpdate: (callback: (state: Record<string, any>, probes: Record<string, number[]>) => void) => () => void;
   onProbe: (name: string) => void;
   onSetState: (path: string, value: number) => void;
   activeProbes: string[];
@@ -15,7 +14,8 @@ const StateInspector: React.FC<StateInspectorProps> = ({ onStateUpdate, onProbe,
   const [editValue, setEditValue] = useState('');
 
   useEffect(() => {
-    const unsubscribe = onStateUpdate((newState) => {
+    // Subscribe to state updates from the audio engine
+    const unsubscribe = onStateUpdate((newState, _probes) => {
       setState({ ...newState });
     });
     return unsubscribe;

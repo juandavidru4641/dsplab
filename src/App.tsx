@@ -791,7 +791,7 @@ const App: React.FC = () => {
                       <div className="section-title"><Activity size={12} /> PROBE SCOPE (MULTI-TRACE)</div>
                       <MultiScopeView 
                         probes={activeProbes} 
-                        getProbedData={(name) => audioEngineRef.current.getProbedStates()[name] || null} 
+                        onStateUpdate={(cb) => audioEngineRef.current.onStateUpdate(cb)}
                       />
                     </div>
                   )}

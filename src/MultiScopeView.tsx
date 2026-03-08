@@ -2,13 +2,31 @@ import React, { useEffect, useRef, useState } from 'react';
 
 interface MultiScopeViewProps {
   probes: string[];
-  getProbedData: (name: string) => number[] | null;
+  onStateUpdate: (callback: (state: Record<string, any>, probes: Record<string, number[]>) => void) => () => void;
 }
 
-const MultiScopeView: React.FC<MultiScopeViewProps> = ({ probes, getProbedData }) => {
+const MultiScopeView: React.FC<MultiScopeViewProps> = ({ probes, onStateUpdate }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const historyRef = useRef<Record<string, number[]>>({});
-  const [timebase, setTimebase] = useState(500);
+  const [timebase, setTimebase] = useState(1000);
+
+  useEffect(() => {
+    // Subscribe to fresh data packets only
+    const unsubscribe = onStateUpdate((_state, probesData) => {
+      probes.forEach(probe => {
+        const newData = probesData[probe];
+        if (newData && newData.length > 0) {
+          if (!historyRef.current[probe]) historyRef.current[probe] = [];
+          historyRef.current[probe].push(...newData);
+          // Limit history to max possible timebase
+          if (historyRef.current[probe].length > 5000) {
+            historyRef.current[probe] = historyRef.current[probe].slice(-5000);
+          }
+        }
+      });
+    });
+    return unsubscribe;
+  }, [onStateUpdate, probes]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -54,23 +72,14 @@ const MultiScopeView: React.FC<MultiScopeViewProps> = ({ probes, getProbedData }
         return;
       }
 
-      // Update History with new block of points
-      probes.forEach(probe => {
-        const newData = getProbedData(probe);
-        if (newData && newData.length > 0) {
-          if (!historyRef.current[probe]) historyRef.current[probe] = [];
-          historyRef.current[probe].push(...newData);
-          if (historyRef.current[probe].length > timebase) {
-            historyRef.current[probe] = historyRef.current[probe].slice(-timebase);
-          }
-        }
-      });
-
       const laneHeight = drawHeight / probes.length;
 
       probes.forEach((probe, idx) => {
-        const history = historyRef.current[probe];
-        if (!history || history.length < 2) return;
+        let history = historyRef.current[probe] || [];
+        if (history.length < 2) return;
+
+        // Visual crop to current timebase
+        const displayHistory = history.slice(-timebase);
 
         if (idx > 0) {
           ctx.strokeStyle = 'rgba(0, 255, 0, 0.3)';
@@ -84,18 +93,18 @@ const MultiScopeView: React.FC<MultiScopeViewProps> = ({ probes, getProbedData }
         ctx.beginPath();
 
         const sliceWidth = drawWidth / (timebase - 1);
-        let min = history[0];
-        let max = history[0];
-        for (let i = 1; i < history.length; i++) {
-          if (history[i] < min) min = history[i];
-          if (history[i] > max) max = history[i];
+        
+        // Fast Auto-scale logic
+        let min = displayHistory[0];
+        let max = displayHistory[0];
+        for (let i = 1; i < displayHistory.length; i++) {
+          if (displayHistory[i] < min) min = displayHistory[i];
+          if (displayHistory[i] > max) max = displayHistory[i];
         }
         let range = Math.max(0.0001, max - min);
-
-        // Check if logic signal (boolean-like)
         const isLogic = range === 1.0 && (min === 0 || min === -1);
 
-        history.forEach((val, i) => {
+        displayHistory.forEach((val, i) => {
           const norm = (val - min) / range;
           const x = i * sliceWidth;
           const y = (idx * laneHeight) + (laneHeight - norm * laneHeight * 0.8) - (laneHeight * 0.1);
@@ -104,8 +113,8 @@ const MultiScopeView: React.FC<MultiScopeViewProps> = ({ probes, getProbedData }
             ctx.moveTo(x, y);
           } else {
             if (isLogic) {
-              // Square-edged plotting for logic
-              ctx.lineTo(x, (idx * laneHeight) + (laneHeight - (history[i-1] - min) / range * laneHeight * 0.8) - (laneHeight * 0.1));
+              const prevNorm = (displayHistory[i-1] - min) / range;
+              ctx.lineTo(x, (idx * laneHeight) + (laneHeight - prevNorm * laneHeight * 0.8) - (laneHeight * 0.1));
             }
             ctx.lineTo(x, y);
           }
@@ -113,7 +122,7 @@ const MultiScopeView: React.FC<MultiScopeViewProps> = ({ probes, getProbedData }
         ctx.stroke();
 
         ctx.font = 'bold 10px monospace';
-        const labelText = `${probe}: ${history[history.length-1].toFixed(4)}`;
+        const labelText = `${probe}: ${displayHistory[displayHistory.length-1].toFixed(4)}`;
         ctx.fillStyle = 'rgba(0,0,0,0.6)';
         const textWidth = ctx.measureText(labelText).width;
         ctx.fillRect(2, (idx * laneHeight) + 2, textWidth + 6, 14);
@@ -127,7 +136,7 @@ const MultiScopeView: React.FC<MultiScopeViewProps> = ({ probes, getProbedData }
 
     render();
     return () => cancelAnimationFrame(animationFrame);
-  }, [probes, getProbedData, timebase]);
+  }, [probes, timebase]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
