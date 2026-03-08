@@ -418,6 +418,7 @@ COMMUNICATION STYLE:
 - When the user asks a question, don't just answer; explain the underlying physical or mathematical principles (e.g., Fourier Transform, Z-domain stability, aliasing).
 - Be extremely verbose and detailed about your internal state and planned actions.
 - Use 'user_message' to provide status updates for complex multi-step operations.
+- Your 'Red Scanner' thinking state indicates high-intensity DSP computation.
 - If a compilation error occurs, perform a detailed post-mortem analysis of the error trace before attempting a fix.
 - Always verify your work using 'get_live_telemetry' and 'get_spectrum_data' to ensure the audible result matches your mathematical model.
 `;
