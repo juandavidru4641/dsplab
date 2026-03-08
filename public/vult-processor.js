@@ -1,4 +1,33 @@
 
+// Vult Runtime for AudioWorklet
+const vultRuntime = `
+  var random = Math.random;
+  var irandom = function() { return Math.floor(Math.random() * 4294967296); };
+  var eps = function() { return 1e-18; };
+  var pi = function() { return Math.PI; };
+  var clip = function(x, low, high) { return x < low ? low : (x > high ? high : x); };
+  var not = function(x) { return x === 0 ? 1 : 0; };
+  var real = function(x) { return parseFloat(x); };
+  var int = function(x) { return parseInt(x) | 0; };
+  var sin = Math.sin;
+  var cos = Math.cos;
+  var tan = Math.tan;
+  var tanh = Math.tanh;
+  var abs = Math.abs;
+  var exp = Math.exp;
+  var log = Math.log;
+  var floor = Math.floor;
+  var sqrt = Math.sqrt;
+  var pow = Math.pow;
+  var log10 = Math.log10;
+  var set = function(a, i, v) { if(a) a[i] = v; };
+  var get = function(a, i) { return a ? a[i] : 0; };
+  var makeArray = function(size, v) { return new Array(size).fill(v); };
+  var wrap_array = function(a) { return a; };
+  var int_to_float = function(i) { return i; };
+  var float_to_int = function(f) { return Math.floor(f) | 0; };
+`;
+
 class VultProcessor extends AudioWorkletProcessor {
   constructor() {
     super();
@@ -13,16 +42,16 @@ class VultProcessor extends AudioWorkletProcessor {
     this.probeBuffers = {};
     this.genStates = [];
     
-    // Optimization: Cache discovered keys to avoid re-scanning the object tree every frame
     this.discoveredKeys = [];
-    this.lastCodeId = 0;
 
     this.port.onmessage = (event) => {
       const { type, data } = event.data;
       if (type === 'updateCode') {
         try {
           this.vultInstance = null;
-          const body = "var exports = {};\n" + data.jsCode + "\n" +
+          // We wrap the code to capture the class and provide the runtime
+          const body = vultRuntime + "\n" +
+                       "var exports = {};\n" + data.jsCode + "\n" +
                        "if (typeof vultProcess !== 'undefined') return vultProcess;\n" +
                        "if (typeof exports !== 'undefined' && exports.vultProcess) return exports.vultProcess;\n" +
                        "return null;";
@@ -30,11 +59,14 @@ class VultProcessor extends AudioWorkletProcessor {
           const VultConstructor = factory();
           if (!VultConstructor) throw new Error("vultProcess class not found");
           
-          this.vultInstance = new VultConstructor();
-          const initFn = this.vultInstance.liveDefault || this.vultInstance.default;
-          if (typeof initFn === 'function') initFn.call(this.vultInstance);
+          const instance = new VultConstructor();
+          // IMPORTANT: Bind the process function
+          instance._processFn = instance.liveProcess || instance.process;
           
-          // Force a discovery scan once
+          const initFn = instance.liveDefault || instance.default;
+          if (typeof initFn === 'function') initFn.call(instance);
+          
+          this.vultInstance = instance;
           this.discoverVariables();
           
           this.port.postMessage({ type: 'status', success: true });
@@ -72,27 +104,18 @@ class VultProcessor extends AudioWorkletProcessor {
     };
   }
 
-  // One-time discovery scan to find all meaningful variables
   discoverVariables() {
     this.discoveredKeys = [];
     if (!this.vultInstance) return;
-
     const seen = new Set();
     const scan = (obj, prefix = "", depth = 0) => {
       if (depth > 4 || !obj || typeof obj !== 'object' || seen.has(obj)) return;
       seen.add(obj);
-
       const keys = Object.getOwnPropertyNames(obj);
       for (const key of keys) {
-        // Filter out internal Vult noise and methods
-        if (key === 'context' || key === '_ctx' || key === '_processFn' || 
-            key.startsWith('live') || key.startsWith('Live_') || 
-            key.startsWith('_inst') || // Hidden instances
-            typeof obj[key] === 'function') continue;
-        
+        if (key === 'context' || key === '_ctx' || key === '_processFn' || key.startsWith('live') || key.startsWith('Live_') || typeof obj[key] === 'function') continue;
         const val = obj[key];
         const fullKey = prefix ? prefix + "." + key : key;
-
         if (typeof val === 'number' || typeof val === 'boolean') {
           this.discoveredKeys.push({ path: fullKey, segments: fullKey.split('.') });
         } else if (typeof val === 'object' && val !== null) {
@@ -100,20 +123,16 @@ class VultProcessor extends AudioWorkletProcessor {
         }
       }
     };
-
     if (this.vultInstance.context) scan(this.vultInstance.context);
     if (this.vultInstance._ctx) scan(this.vultInstance._ctx);
     scan(this.vultInstance);
   }
 
-  // Efficient state fetcher using cached paths
   getQuickState() {
     const state = {};
-    const root = this.vultInstance;
-    if (!root) return state;
-
+    if (!this.vultInstance) return state;
     for (const item of this.discoveredKeys) {
-      let current = root.context || root._ctx || root;
+      let current = this.vultInstance.context || this.vultInstance._ctx || this.vultInstance;
       for (const segment of item.segments) {
         if (current) current = current[segment];
         else break;
@@ -168,7 +187,6 @@ class VultProcessor extends AudioWorkletProcessor {
         try {
           const result = this.vultInstance._processFn.apply(this.vultInstance, inputValues);
           
-          // Efficient Probe Update
           if (this.activeProbes.length > 0) {
             this.activeProbes.forEach(p => {
               const parts = p.split('.');
@@ -194,7 +212,6 @@ class VultProcessor extends AudioWorkletProcessor {
       }
     }
 
-    // TELEMETRY: Throttle updates to ~15Hz and use efficient fetch
     if (this.vultInstance && this.telemetryCounter++ > 23) {
       this.telemetryCounter = 0;
       const state = this.getQuickState();
