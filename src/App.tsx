@@ -644,9 +644,41 @@ const App: React.FC = () => {
     } catch (e) { setStatus('Network Error'); }
   };
 
+  const handleLoadCode = useCallback((newCode: string) => {
+    if (!newCode) return;
+    setActiveProbes([]);
+    audioEngineRef.current.setProbes([]);
+    setEditorMarkers([]);
+    setDiffMode(false);
+    setOriginalCode('');
+    setStatus('Loading...');
+
+    setCode(newCode);
+    localStorage.setItem('vult_session_code', newCode);
+    
+    setCcLabels(parseVultCCs(newCode));
+    setInputs(parseVultInputs(newCode));
+
+    if (isPlaying) {
+      audioEngineRef.current.updateCode(newCode).then(result => {
+        if (result.success) setStatus('Running');
+        else {
+          setStatus('Compile Error');
+          const m = parseVultError(result.error);
+          if (m) setEditorMarkers([m]);
+        }
+      });
+    } else {
+      setStatus('Idle');
+    }
+  }, [isPlaying, parseVultCCs, parseVultInputs]);
+
   const loadPreset = (name: string) => {
     const presetCode = PRESETS[name];
-    if (presetCode) { skipNextUpdateRef.current = false; handleCodeChange(presetCode); }
+    if (presetCode) {
+      skipNextUpdateRef.current = false;
+      handleLoadCode(presetCode);
+    }
   };
 
   const handleAgentUpdateCode = async (newCode: string) => {
@@ -724,7 +756,17 @@ const App: React.FC = () => {
           <div className="divider" />
           <div className="control-group"><span className="label">PRESET</span><select value="" onChange={(e) => loadPreset(e.target.value)}><option value="" disabled>Load...</option>{Object.keys(PRESETS).map(p => <option key={p} value={p}>{p}</option>)}</select></div>
           <div className="control-group"><span className="label">MIDI</span><select value={selectedMidiInput} onChange={(e) => { setSelectedMidiInput(e.target.value); midiControllerRef.current?.setInput(e.target.value === 'all' ? null : e.target.value); }}><option value="all">All</option>{midiInputs.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}</select></div>
-          <div className="control-group"><span className="label">SAVED</span><select value="" onChange={(e) => handleCodeChange(JSON.parse(localStorage.getItem('vult_projects') || '{}')[e.target.value])}><option value="" disabled>Open...</option>{savedProjects.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
+          <div className="control-group">
+            <span className="label">SAVED</span>
+            <select value="" onChange={(e) => {
+              const projects = JSON.parse(localStorage.getItem('vult_projects') || '{}');
+              const savedCode = projects[e.target.value];
+              if (savedCode) handleLoadCode(savedCode);
+            }}>
+              <option value="" disabled>Open...</option>
+              {savedProjects.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
           <div className="spacer" />
           <div className={`status-badge ${(status === 'Compile Error' || status === 'Runtime Crash') ? 'error' : ''}`}><Activity size={14} />{status}</div>
         </div>

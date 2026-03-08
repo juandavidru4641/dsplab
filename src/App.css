@@ -492,21 +492,8 @@
   min-height: 250px; /* Ensure editor is never too small */
   position: relative;
   background: #1e1e1e;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 12px;
-  background: #1a1a1a;
-  cursor: pointer;
-  user-select: none;
-  border-bottom: 1px solid #222;
-  height: 30px;
-  flex-shrink: 0;
-  position: relative;
-  z-index: 5;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .section-title {
@@ -523,6 +510,21 @@
   text-overflow: ellipsis;
   flex: 1;
   pointer-events: none;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #1a1a1a;
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 1px solid #222;
+  height: 30px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 5;
 }
 
 .section-header:hover {
