@@ -6,9 +6,8 @@ global.window = global;
 global.self = global;
 global.navigator = { userAgent: 'node' };
 
-// We try to require the .js file directly. 
-// Since this is a .cjs file, Node should treat the .js as CommonJS unless there's a package.json saying otherwise in that dir.
-const vultModule = require('./public/vultweb.js');
+// We use .cjs to ensure Node treats it as CommonJS regardless of package.json type: module
+const vultModule = require('./public/vultweb.cjs');
 const compiler = vultModule.vult || vultModule;
 
 if (!compiler || typeof compiler.generateJSCode !== 'function') {
