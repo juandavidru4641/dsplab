@@ -109,9 +109,13 @@ const VultEditor: React.FC<VultEditorProps> = ({
     editor.onMouseLeave(() => setHoverData(null));
   };
 
-  const handleDiffMount = (_editor: any, monaco: Monaco) => {
+  const handleDiffMount = (editor: any, monaco: Monaco) => {
     monacoRef.current = monaco;
     setupMonaco(monaco);
+    // Automatically scroll to the first difference
+    setTimeout(() => {
+      if (editor.revealFirstDiff) editor.revealFirstDiff();
+    }, 100);
   };
 
   const handleOnChange = (value: string | undefined) => {

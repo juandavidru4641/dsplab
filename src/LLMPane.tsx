@@ -587,12 +587,15 @@ const LLMPane: React.FC<LLMPaneProps> = ({
               addDisplayMsg('assistant', fc.args.message);
               result = { success: true };
             } else if (name === 'ask_user') {
-              setStatus("Waiting for user...");
-              addDisplayMsg('assistant', fc.args.question);
+              setStatus("User input required.");
+              setIsLoading(false); // Pause scanning animation
+              addDisplayMsg('assistant', fc.args.question, undefined, false, fc.args.options);
               const userResponse = await new Promise<string>((resolve) => {
                 askUserResolverRef.current = resolve;
               });
               askUserResolverRef.current = null;
+              setIsLoading(true); // Resume scanning
+              setStatus("Thinking...");
               result = { response: userResponse };
             }
 
