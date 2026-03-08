@@ -18,6 +18,7 @@ interface LLMPaneProps {
   getSpectrum: () => number[];
   getPeakFrequencies: (count?: number) => {energy: number, frequency: number}[];
   getHarmonics: () => any;
+  getSignalQuality: () => any;
   getAudioMetrics: () => Record<string, number>;
   systemPrompt: string;
 }
@@ -35,7 +36,7 @@ type Message = { role: 'user' | 'model', parts: MessagePart[] };
 const LLMPane: React.FC<LLMPaneProps> = ({ 
   currentCode, onUpdateCode, onSetKnob, onTriggerGenerator, 
   onConfigureInput, onLoadPreset, onSaveSnapshot, onSetProbes, onConfigureSequencer, 
-  getPresets, getSequencerState, getTelemetry, getTelemetryHistory, getSpectrum, getPeakFrequencies, getHarmonics, getAudioMetrics, systemPrompt 
+  getPresets, getSequencerState, getTelemetry, getTelemetryHistory, getSpectrum, getPeakFrequencies, getHarmonics, getSignalQuality, getAudioMetrics, systemPrompt 
 }) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -356,6 +357,11 @@ const LLMPane: React.FC<LLMPaneProps> = ({
       {
         name: "get_harmonics",
         description: "Analyzes the harmonic content of the output signal. Identifies the fundamental frequency and the relative strength of the first 8 harmonics. Use this to verify waveform shapes (e.g. square vs sawtooth) or filter saturation.",
+        parameters: { type: "OBJECT", properties: {} }
+      },
+      {
+        name: "get_signal_quality",
+        description: "Calculates advanced signal quality metrics including THD+N (Total Harmonic Distortion + Noise), SNR (Signal-to-Noise Ratio), and Peak Level in dBFS. Use this for high-precision technical audio analysis.",
         parameters: { type: "OBJECT", properties: {} }
       },
       {
@@ -812,6 +818,7 @@ const LLMPane: React.FC<LLMPaneProps> = ({
             'get_spectrum_data': '[RESEARCH] Analyzing spectrum',
             'get_peak_frequencies': '[RESEARCH] Finding peak frequencies',
             'get_harmonics': '[RESEARCH] Analyzing harmonics',
+            'get_signal_quality': '[RESEARCH] Measuring signal quality',
             'get_audio_metrics': '[RESEARCH] Measuring audio quality',
             'user_message': '[STATUS] Sending status update',
             'ask_user': '[STATUS] Requesting guidance',
@@ -982,6 +989,9 @@ const LLMPane: React.FC<LLMPaneProps> = ({
             } else if (name === 'get_harmonics') {
               addDisplayMsg('system', `[RESEARCH] Analyzing harmonics`);
               result = { analysis: getHarmonics() };
+            } else if (name === 'get_signal_quality') {
+              addDisplayMsg('system', `[RESEARCH] Measuring signal quality`);
+              result = { quality: getSignalQuality() };
             } else if (name === 'get_audio_metrics') {
               addDisplayMsg('system', `[RESEARCH] Measuring output signal quality (RMS/Peak/Headroom)`);
               result = { metrics: getAudioMetrics() };

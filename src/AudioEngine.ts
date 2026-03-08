@@ -287,6 +287,45 @@ export class AudioEngine {
     return { fundamental: Math.round(fundamental), harmonics };
   }
 
+  public getSignalQualityMetrics() {
+    if (!this.analyser || !this.audioContext) return null;
+    this.analyser.getByteFrequencyData(this.spectrumBuffer as any);
+    
+    const bins = Array.from(this.spectrumBuffer);
+    const minDb = this.analyser.minDecibels;
+    const maxDb = this.analyser.maxDecibels;
+    const range = maxDb - minDb;
+
+    // Convert byte values to linear power
+    const powers = bins.map(v => Math.pow(10, (minDb + (v / 255) * range) / 10));
+    
+    let totalPower = 0;
+    let maxPower = 0;
+    let maxBin = -1;
+
+    for (let i = 0; i < powers.length; i++) {
+      totalPower += powers[i];
+      if (powers[i] > maxPower) {
+        maxPower = powers[i];
+        maxBin = i;
+      }
+    }
+
+    if (totalPower === 0 || maxPower < 1e-9) return { error: "Signal too weak for analysis." };
+
+    const noiseAndDistPower = totalPower - maxPower;
+    const thdn = (noiseAndDistPower / totalPower) * 100;
+    const snr = 10 * Math.log10(maxPower / (noiseAndDistPower + 1e-12));
+    const peakDb = minDb + (bins[maxBin] / 255) * range;
+
+    return {
+      thdn_percent: thdn.toFixed(3) + "%",
+      snr_db: snr.toFixed(2) + " dB",
+      peak_level_db: peakDb.toFixed(2) + " dBFS",
+      fundamental_hz: Math.round(maxBin * this.audioContext.sampleRate / this.analyser.fftSize)
+    };
+  }
+
   public sendNoteOn(note: number, velocity: number, channel: number = 0) {
     if (this.workletNode) {
       this.workletNode.port.postMessage({ type: 'noteOn', data: { note, velocity, channel } });
