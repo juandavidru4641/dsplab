@@ -534,7 +534,13 @@ const App: React.FC = () => {
         if (historyRaw) setCodeHistory(JSON.parse(historyRaw));
         
         let startCode = code;
-        if (lastSession) { startCode = lastSession; setCode(lastSession); }
+        if (lastSession && lastSession.trim().length > 50) { 
+          startCode = lastSession; 
+          setCode(lastSession); 
+        } else {
+          setCode(PRESETS["vs80"]);
+          startCode = PRESETS["vs80"];
+        }
         
         setInputs(parseVultInputs(startCode));
         setCcLabels(parseVultCCs(startCode));
