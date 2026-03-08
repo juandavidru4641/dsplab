@@ -688,6 +688,16 @@ const App: React.FC = () => {
     window.addEventListener('mouseup', handleUp);
   };
 
+  const getCodeSummary = (codeStr: string) => {
+    const lines = codeStr.split('\n');
+    const firstMeaningfulLine = lines.find(l => {
+      const trimmed = l.trim();
+      return trimmed.length > 0 && !trimmed.match(/^\/\/[\s=*-]*$/);
+    });
+    const summary = firstMeaningfulLine || lines[0] || "";
+    return summary.substring(0, 100).trim();
+  };
+
   return (
     <div className="app-container">
       <div className="sidebar">
@@ -828,7 +838,7 @@ const App: React.FC = () => {
                     {codeHistory.map((entry, idx) => (
                       <div key={idx} style={{ padding: '10px', borderBottom: '1px solid #333', cursor: 'pointer', background: code === entry.code ? '#2d2d2d' : 'transparent', borderRadius: '4px', marginBottom: '4px', transition: 'all 0.2s' }} onClick={() => { setOriginalCode(code); setCode(entry.code); setDiffMode(true); }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}><span style={{ fontSize: '11px', color: '#ffcc00', fontWeight: 'bold' }}>{entry.msg}</span><span style={{ fontSize: '9px', color: '#666' }}>{new Date(entry.timestamp).toLocaleTimeString()}</span></div>
-                        <div style={{ fontSize: '10px', color: '#888', fontStyle: 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{entry.code.substring(0, 100).replace(/\n/g, ' ')}...</div>
+                        <div style={{ fontSize: '10px', color: '#888', fontStyle: 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{getCodeSummary(entry.code)}</div>
                       </div>
                     ))}
                   </div>

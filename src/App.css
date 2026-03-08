@@ -487,19 +487,43 @@
   background: #ffcc00;
 }
 
+.section-title {
+  font-size: 10px;
+  font-weight: 900;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 12px;
+  padding: 8px 12px;
   background: #1a1a1a;
   cursor: pointer;
   user-select: none;
   border-bottom: 1px solid #222;
+  height: 30px;
+  flex-shrink: 0;
+  z-index: 10;
+  position: sticky;
+  top: 0;
 }
 
 .section-header:hover {
   background: #252525;
+}
+
+.section-header svg {
+  flex-shrink: 0;
 }
 
 .dsp-lab.collapsed, 
