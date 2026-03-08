@@ -176,6 +176,23 @@ const LLMPane: React.FC<LLMPaneProps> = ({
   const getToolsDef = () => {
     return [
       {
+        name: "replace_function",
+        description: "Replaces the entire body of a specific function by its name. This is faster and safer than line-based editing for functional updates.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            function_name: { type: "STRING", description: "The name of the function to replace." },
+            new_code: { type: "STRING", description: "The COMPLETE new definition of the function (starting with fun or and)." }
+          },
+          required: ["function_name", "new_code"]
+        }
+      },
+      {
+        name: "fix_boilerplate",
+        description: "Automatically injects missing mandatory handlers (noteOn, noteOff, controlChange, default) if they are absent from the code.",
+        parameters: { type: "OBJECT", properties: {} }
+      },
+      {
         name: "update_code",
         description: "CRITICAL: Overwrites the ENTIRE source code. You MUST provide the complete program including process, noteOn, noteOff etc. NEVER use this for partial snippets; use apply_diff or edit_lines for those.",
         parameters: {
@@ -804,6 +821,8 @@ const LLMPane: React.FC<LLMPaneProps> = ({
             'apply_diff': '[ACTION] Applying surgical fix',
             'edit_lines': '[ACTION] Editing code block',
             'multi_edit': '[ACTION] Performing batch edits',
+            'replace_function': '[ACTION] Replacing function block',
+            'fix_boilerplate': '[ACTION] Restoring required handlers',
             'update_code': '[ACTION] Updating full code',
             'set_knob': '[TEST] Adjusting laboratory knob',
             'set_multiple_knobs': '[TEST] Configuring parameter block',
@@ -921,6 +940,64 @@ const LLMPane: React.FC<LLMPaneProps> = ({
               addDisplayMsg('system', `[RESEARCH] Configuring logic analyzer probes: ${fc.args.probes.join(', ')}`);
               onSetProbes(fc.args.probes);
               result = { success: true };
+            } else if (name === 'replace_function') {
+              const { function_name, new_code } = fc.args;
+              addDisplayMsg('system', `[ACTION] Replacing function: ${function_name}`);
+              const code = codeRef.current;
+              // Regex to find function definition and body start
+              const regex = new RegExp(`(fun|and)\\s+${function_name}\\s*\\([^)]*\\)\\s*(?::\\s*[a-zA-Z_]\\w*)?\\s*{`, 'g');
+              const match = regex.exec(code);
+              if (match) {
+                const startIdx = match.index;
+                let braceCount = 1;
+                let endIdx = -1;
+                for (let i = match.index + match[0].length; i < code.length; i++) {
+                  if (code[i] === '{') braceCount++;
+                  if (code[i] === '}') braceCount--;
+                  if (braceCount === 0) {
+                    endIdx = i + 1;
+                    break;
+                  }
+                }
+                if (endIdx !== -1) {
+                  const updatedCode = code.substring(0, startIdx) + new_code + code.substring(endIdx);
+                  const res = await onUpdateCode(updatedCode);
+                  if (res.success) {
+                    addDisplayMsg('system', `[ACTION] Successfully replaced function ${function_name}.`);
+                    result = { success: true };
+                  } else {
+                    result = { success: false, error: res.error };
+                  }
+                } else {
+                  result = { success: false, error: "Could not find end of function body (unbalanced braces)." };
+                }
+              } else {
+                result = { success: false, error: `Function '${function_name}' not found with brace body.` };
+              }
+            } else if (name === 'fix_boilerplate') {
+              addDisplayMsg('system', `[ACTION] Fixing mandatory boilerplate`);
+              let code = codeRef.current;
+              const required = [
+                { name: 'noteOn', code: '\nand noteOn(note: int, velocity: int, channel: int) { }' },
+                { name: 'noteOff', code: '\nand noteOff(note: int, channel: int) { }' },
+                { name: 'controlChange', code: '\nand controlChange(control: int, value: int, channel: int) { }' },
+                { name: 'default', code: '\nand default() { }' }
+              ];
+              let addedCount = 0;
+              for (const req of required) {
+                const hasFun = new RegExp(`fun\\s+${req.name}\\s*\\(`, 'g').test(code);
+                const hasAnd = new RegExp(`and\\s+${req.name}\\s*\\(`, 'g').test(code);
+                if (!hasFun && !hasAnd) {
+                  code += req.code;
+                  addedCount++;
+                }
+              }
+              if (addedCount > 0) {
+                const res = await onUpdateCode(code);
+                result = { success: res.success, error: res.error, message: `Added ${addedCount} missing handlers.` };
+              } else {
+                result = { success: true, message: "Boilerplate already present." };
+              }
             } else if (name === 'update_code') {
               addDisplayMsg('system', `[ACTION] Performing full code rewrite`);
               const res = await onUpdateCode(fc.args.new_code);

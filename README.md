@@ -28,13 +28,34 @@ Vult-O-Mat integrates a low-latency AudioWorklet execution engine with server-si
 The IDE features an autonomous agent designed to assist with DSP development. It has direct access to the development environment through a set of specialized tools.
 
 *   **Autonomous Iteration:** The agent performs trial compilations of its code. If the compiler returns an error, the agent analyzes the trace and attempts to correct the logic autonomously.
-*   **Surgical Editing:** Uses precise line-editing and diff-based tools to modify specific blocks of code while maintaining the integrity of the surrounding architecture.
+*   **Semantic Editing:** Uses high-level tools like `replace_function` and `fix_boilerplate` to modify entire logic blocks safely, while maintaining the ability for surgical line-editing (`multi_edit`).
 *   **Persistent Workflow:** If a specific tool or strategy fails, the agent is instructed to automatically pivot to an alternative approach (e.g., from diffing to block-editing) to ensure the task is completed.
-*   **Real-time Communication:** Uses the `tell` tool to provide continuous progress updates and explain its reasoning while executing multi-step DSP tasks.
-*   **Hardware Control:** The agent can manipulate virtual CC knobs and laboratory generators to test the response of the current patch.
-*   **Verification Loop:** Can read internal memory states, capture frequency spectrum data, and analyze technical audio metrics (Peak, RMS, Headroom) to verify behavioral correctness.
-*   **Multi-Provider Support:** Supports both the Gemini 2.0 streaming API and local OpenAI-compatible endpoints (Ollama, LM Studio).
-*   **Transparency:** Features a side-by-side diff view for final user approval of agent-proposed changes and collapsible internal reasoning logs.
+*   **Verification Loop:** Empirically verifies behavioral correctness using `get_live_telemetry`, `get_spectrum_data`, and `get_harmonics` before concluding any task.
+
+### Agent Toolset
+
+The agent is equipped with a professional diagnostic and engineering suite:
+
+| Category | Tool | Description |
+| :--- | :--- | :--- |
+| **Research** | `get_current_code` | Reads the full Vult source code context. |
+| | `list_functions` | Maps out all function signatures and parameters. |
+| | `grep_search` | Searches for patterns across the codebase. |
+| | `get_vult_reference` | Consults the official language syntax guide. |
+| **Action** | `replace_function` | Safely replaces an entire function body by name. |
+| | `multi_edit` | Performs multiple surgical line-block replacements. |
+| | `fix_boilerplate` | Automatically restores missing mandatory MIDI handlers. |
+| | `update_code` | Performs a complete architectural rewrite of the file. |
+| **Verification** | `get_live_telemetry` | Inspects all internal memory states in real-time. |
+| | `get_state_history` | Tracks historical changes of a specific variable. |
+| | `get_spectrum_data` | Captures a 1024-band frequency snapshot. |
+| | `get_harmonics` | Analyzes fundamental pitch and harmonic series. |
+| | `get_signal_quality` | Measures THD+N, SNR, and Peak Levels in dBFS. |
+| **Testing** | `set_multiple_knobs` | Configures laboratory parameter blocks. |
+| | `configure_sequencer` | Programs melodic patterns for polyphonic testing. |
+| | `trigger_generator` | Injects laboratory signals (Impulse, Sweep, etc.). |
+| **Strategy** | `write_plan` | Documents multi-step engineering plans. |
+| | `store_snapshot` | Saves named restore points in version history. |
 
 ## Diagnostic Laboratory
 

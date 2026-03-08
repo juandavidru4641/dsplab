@@ -414,7 +414,7 @@ LABORATORY WORKFLOW:
 - Read: Use 'get_current_code' for context or 'list_functions' to map signatures.
 - Reference: Use 'get_vult_reference' for syntax and built-ins.
 - Plan: Use 'write_plan' to document your strategy and 'get_development_plan' to review it.
-- Edit: Use 'apply_diff' or 'edit_lines' for surgical fixes. Use 'update_code' for rewrites.
+- Edit: Use 'apply_diff' or 'edit_lines' for surgical fixes. Use 'replace_function' to rewrite entire function bodies safely. Use 'fix_boilerplate' to restore missing MIDI handlers. Use 'update_code' for rewrites.
 - History: Use 'store_snapshot' to create restore points. 
 - Test: Use 'set_knob' or 'set_multiple_knobs' to test parameter ranges. Use 'configure_sequencer' for melodies.
 - Verify: Use 'get_live_telemetry' for full state, 'get_state' for specific precision verification, 'get_state_history' to track changes over time, 'get_spectrum_data' for frequency analysis, 'get_harmonics' to analyze waveform timbre, 'get_signal_quality' for technical SNR/THD+N metrics, and 'get_audio_metrics' to analyze signal quality.
