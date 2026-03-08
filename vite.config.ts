@@ -58,5 +58,10 @@ export default defineConfig({
   ],
   optimizeDeps: {
     include: ['react-piano']
+  },
+  resolve: {
+    alias: {
+      'react-piano': path.resolve(__dirname, 'node_modules/react-piano/dist/react-piano.esm.js')
+    }
   }
 })
