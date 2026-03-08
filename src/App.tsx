@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Square, Cpu, Zap, Activity, Save, Download, Sliders, AudioWaveform, Code2 } from 'lucide-react';
+import { Play, Square, Cpu, Zap, Activity, Save, Download, Sliders, AudioWaveform, Code2, Database } from 'lucide-react';
 import { AudioEngine } from './AudioEngine';
 import type { InputSource, SourceType } from './AudioEngine';
 import { MIDIController } from './MIDIController';
@@ -7,6 +7,7 @@ import VultEditor from './VultEditor';
 import ScopeView from './ScopeView';
 import LLMPane from './LLMPane';
 import VirtualMIDI from './VirtualMIDI';
+import StateInspector from './StateInspector';
 import './App.css';
 
 const PRESETS: Record<string, string> = {
@@ -207,6 +208,7 @@ const App: React.FC = () => {
   const [status, setStatus] = useState('Idle');
   const [midiStatus, setMidiStatus] = useState('MIDI: Off');
   const [editorMarkers, setEditorMarkers] = useState<any[]>([]);
+  const [showInspector, setShowInspector] = useState(false);
   
   const [inputs, setInputs] = useState<InputSource[]>([]);
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
@@ -392,6 +394,7 @@ const App: React.FC = () => {
         <div className="nav-item" title="Save" onClick={handleSave}><Save size={18} /></div>
         <div className="nav-item" title="Download Vult" onClick={handleDownload}><Download size={18} /></div>
         <div className="nav-item" title="Export C++" onClick={handleExportCPP}><Code2 size={18} /></div>
+        <div className={`nav-item ${showInspector ? 'active' : ''}`} title="State Inspector" onClick={() => setShowInspector(!showInspector)}><Database size={18} /></div>
         <div className="spacer" />
         <div className="midi-status-circle" title={midiStatus} style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#00ff00', marginBottom: '20px' }} />
       </div>
@@ -501,7 +504,11 @@ const App: React.FC = () => {
               <ScopeView getScopeData={() => audioEngineRef.current.getScopeData()} getSpectrumData={() => audioEngineRef.current.getSpectrumData()} />
             </div>
             <div className="llm-section">
-              <LLMPane onGenerateCode={handleCodeChange} systemPrompt={SYSTEM_PROMPT} />
+              {showInspector ? (
+                <StateInspector getLiveState={() => audioEngineRef.current.getLiveState()} />
+              ) : (
+                <LLMPane onGenerateCode={handleCodeChange} systemPrompt={SYSTEM_PROMPT} />
+              )}
             </div>
           </div>
         </div>
