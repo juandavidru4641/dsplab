@@ -1063,6 +1063,10 @@ const App: React.FC = () => {
                   onConfigureInput={(idx, config) => updateInput(idx, config)}
                   onLoadPreset={(name) => loadPreset(name)}
                   onSaveSnapshot={(msg) => saveSnapshot(msg)}
+                  onSetProbes={(probes) => {
+                    setActiveProbes(probes);
+                    audioEngineRef.current.setProbes(probes);
+                  }}
                   getPresets={() => Object.keys(PRESETS)}
                   getTelemetry={() => audioEngineRef.current.getLiveState()}
                   getSpectrum={() => Array.from(audioEngineRef.current.getSpectrumData())}

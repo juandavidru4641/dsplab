@@ -9,6 +9,7 @@ interface LLMPaneProps {
   onConfigureInput: (index: number, config: any) => void;
   onLoadPreset: (name: string) => void;
   onSaveSnapshot: (message: string) => void;
+  onSetProbes: (probes: string[]) => void;
   getPresets: () => string[];
   getTelemetry: () => Record<string, any>;
   getSpectrum: () => number[];
@@ -26,7 +27,7 @@ type Message = { role: 'user' | 'model', parts: MessagePart[] };
 
 const LLMPane: React.FC<LLMPaneProps> = ({ 
   currentCode, onUpdateCode, onSetKnob, onTriggerGenerator, 
-  onConfigureInput, onLoadPreset, onSaveSnapshot, getPresets, getTelemetry, getSpectrum, getAudioMetrics, systemPrompt 
+  onConfigureInput, onLoadPreset, onSaveSnapshot, onSetProbes, getPresets, getTelemetry, getSpectrum, getAudioMetrics, systemPrompt 
 }) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -296,6 +297,39 @@ const LLMPane: React.FC<LLMPaneProps> = ({
             message: { type: "STRING", description: "The message to display." }
           },
           required: ["message"]
+        }
+      },
+      {
+        name: "multi_edit",
+        description: "Applies multiple line-block edits in a single turn. Automatically handles line shifts. Provide edits in any order.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            edits: {
+              type: "ARRAY",
+              items: {
+                type: "OBJECT",
+                properties: {
+                  start_line: { type: "NUMBER", description: "1-based start line." },
+                  end_line: { type: "NUMBER", description: "1-based end line." },
+                  new_code: { type: "STRING", description: "New code for this range." }
+                },
+                required: ["start_line", "end_line", "new_code"]
+              }
+            }
+          },
+          required: ["edits"]
+        }
+      },
+      {
+        name: "set_probes",
+        description: "Configures which internal 'mem' variables should be active in the multi-trace scope (max 6).",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            probes: { type: "ARRAY", items: { type: "STRING" }, description: "List of variable paths (e.g. ['voice1.env', 'lfo_val'])." }
+          },
+          required: ["probes"]
         }
       },
       {
@@ -576,6 +610,8 @@ const LLMPane: React.FC<LLMPaneProps> = ({
             'store_snapshot': 'Saving version snapshot',
             'list_functions': 'Analyzing function signatures',
             'get_vult_reference': 'Consulting language guide',
+            'multi_edit': 'Performing batch edits',
+            'set_probes': 'Configuring logic analyzer',
             'tell': 'Communicating'
           };
 
@@ -638,6 +674,36 @@ const LLMPane: React.FC<LLMPaneProps> = ({
                 addDisplayMsg('system', `❌ Invalid line range: ${start_line}-${end_line}`);
                 result = { success: false, error: "Invalid line ranges." };
               }
+            } else if (name === 'multi_edit') {
+              const edits = [...fc.args.edits];
+              addDisplayMsg('system', `🛠️ Applying ${edits.length} batch edits`);
+              // Sort descending to handle line shifts
+              edits.sort((a, b) => b.start_line - a.start_line);
+              let workingLines = codeRef.current.split('\n');
+              let ok = true;
+              for (const e of edits) {
+                if (e.start_line > 0 && e.end_line >= e.start_line && e.start_line <= workingLines.length) {
+                  const before = workingLines.slice(0, e.start_line - 1);
+                  const after = workingLines.slice(e.end_line);
+                  workingLines = [...before, ...e.new_code.split('\n'), ...after];
+                } else { ok = false; break; }
+              }
+              if (ok) {
+                const res = await onUpdateCode(workingLines.join('\n'));
+                if (res.success) {
+                  addDisplayMsg('system', `✅ Batch edits applied successfully.`);
+                  result = { success: true };
+                } else {
+                  addDisplayMsg('system', `❌ Batch failed to compile:\n${res.error}`);
+                  result = { success: false, error: res.error };
+                }
+              } else {
+                result = { success: false, error: "Invalid line ranges." };
+              }
+            } else if (name === 'set_probes') {
+              addDisplayMsg('system', `🛠️ Configuring logic analyzer probes: ${fc.args.probes.join(', ')}`);
+              onSetProbes(fc.args.probes);
+              result = { success: true };
             } else if (name === 'update_code') {
               addDisplayMsg('system', `🚀 Performing full code rewrite`);
               const res = await onUpdateCode(fc.args.new_code);
