@@ -8,6 +8,11 @@ A development environment and diagnostic laboratory for the Vult DSP language.
 
 <img width="1624" height="1012" alt="Screenshot 2026-03-08 at 17 54 17" src="https://github.com/user-attachments/assets/03d3f66b-cb70-4d82-aff0-0d6aaff27f8a" />
 
+## Demonstrations
+
+[![Vult-O-Mat Demo 1](https://img.youtube.com/vi/a9dpFKu8R3U/0.jpg)](https://www.youtube.com/watch?v=a9dpFKu8R3U)
+[![Vult-O-Mat Demo 2](https://img.youtube.com/vi/yIxnidwjYcY/0.jpg)](https://www.youtube.com/watch?v=yIxnidwjYcY)
+
 ## Why Vult-O-Mat?
 
 Building custom synthesizers, audio effects, and plugins often involves a high barrier to entry—requiring deep knowledge of low-level optimization, threading, and complex mathematical verification. Vult-O-Mat removes these obstacles by combining the efficient Vult language with an intelligent development partner.
