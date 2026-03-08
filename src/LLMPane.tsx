@@ -461,9 +461,11 @@ const LLMPane: React.FC<LLMPaneProps> = ({
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({ error: { message: response.statusText } }));
-      throw new Error(err.error?.message || response.statusText);
-    }
-    return response.body;
+      let msg = err.error?.message || response.statusText;
+      if (response.status === 429) msg = "429: Quota exceeded or rate limited.";
+      if (response.status === 401) msg = "401: Invalid API key.";
+      throw new Error(msg);
+    }    return response.body;
   };
 
   const callOpenAIStream = async (currentMessages: Message[]) => {
@@ -527,9 +529,11 @@ const LLMPane: React.FC<LLMPaneProps> = ({
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({ error: { message: response.statusText } }));
-      throw new Error(err.error?.message || response.statusText);
-    }
-    return response.body;
+      let msg = err.error?.message || response.statusText;
+      if (response.status === 429) msg = "429: Quota exceeded or rate limited.";
+      if (response.status === 401) msg = "401: Invalid API key.";
+      throw new Error(msg);
+    }    return response.body;
   };
 
   const handleStop = () => {
@@ -558,97 +562,122 @@ const LLMPane: React.FC<LLMPaneProps> = ({
         let currentTextId = "";
         let currentThoughtId = "";
 
-        if (provider === 'gemini') {
-          const stream = await callGeminiStream(currentConversation);
-          if (!stream) break;
-          const reader = stream.getReader();
-          const decoder = new TextDecoder();
-          
-          while (!stopFlagRef.current) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            const chunk = decoder.decode(value);
-            const lines = chunk.split('\n');
-            for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                try {
-                  const data = JSON.parse(line.substring(6));
-                  if (data.usageMetadata) updateTokens(data.usageMetadata);
-                  
-                  const incomingParts = data.candidates?.[0]?.content?.parts || [];
-                  incomingParts.forEach((part: any, index: number) => {
-                    if (!modelParts[index]) {
-                      modelParts[index] = { ...part };
-                    } else {
-                      // Merge incremental updates
-                      if (part.text) modelParts[index].text = (modelParts[index].text || "") + part.text;
-                      if (part.thought) modelParts[index].thought = (modelParts[index].thought || "") + part.thought;
-                      if (part.functionCall) {
-                        modelParts[index].functionCall = { 
-                          ...(modelParts[index].functionCall || {}), 
-                          ...part.functionCall 
-                        };
-                      }
-                    }
-
-                    // Update UI
-                    if (part.text) {
-                      setStatus("Typing...");
-                      if (!currentTextId) currentTextId = addDisplayMsg('assistant', "", undefined, true);
-                      addDisplayMsg('assistant', part.text, currentTextId, true);
-                    }
-                    if (part.thought) {
-                      setStatus("Thinking deeply...");
-                      if (!currentThoughtId) currentThoughtId = addDisplayMsg('thought', "", undefined, true);
-                      addDisplayMsg('thought', part.thought, currentThoughtId, true);
-                    }
-                  });                } catch (e) {}
-              }
-            }
-          }
-        } else {
-          const stream = await callOpenAIStream(currentConversation);
-          if (!stream) break;
-          const reader = stream.getReader();
-          const decoder = new TextDecoder();
-          let currentToolCall: any = null;
-
-          while (!stopFlagRef.current) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            const chunk = decoder.decode(value);
-            const lines = chunk.split('\n');
+        try {
+          if (provider === 'gemini') {
+            const stream = await callGeminiStream(currentConversation);
+            if (!stream) break;
+            const reader = stream.getReader();
+            const decoder = new TextDecoder();
             
-            for (const line of lines) {
-              if (line.startsWith('data: ') && line.trim() !== 'data: [DONE]') {
-                try {
-                  const data = JSON.parse(line.substring(6));
-                  if (data.usage) updateTokens(data.usage);
-                  const delta = data.choices?.[0]?.delta;
-                  if (delta) {
-                    if (delta.content) {
-                      setStatus("Typing...");
-                      if (!currentTextId) currentTextId = addDisplayMsg('assistant', "", undefined, true);
-                      addDisplayMsg('assistant', delta.content, currentTextId, true);
-                      let textPart = modelParts.find(p => p.text !== undefined);
-                      if (!textPart) { textPart = { text: "" }; modelParts.push(textPart); }
-                      textPart.text += delta.content;
+            while (!stopFlagRef.current) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              const chunk = decoder.decode(value);
+              const lines = chunk.split('\n');
+              for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                  try {
+                    const data = JSON.parse(line.substring(6));
+                    
+                    // Handle Gemini specific error candidates
+                    if (data.candidates?.[0]?.finishReason === 'SAFETY') {
+                      throw new Error("Gemini Safety Filter triggered. The request was blocked.");
                     }
-                    if (delta.tool_calls) {
-                      for (const tc of delta.tool_calls) {
-                        if (tc.function?.name) { currentToolCall = { name: tc.function.name, argsString: tc.function.arguments || "" }; }
-                        else if (tc.function?.arguments && currentToolCall) { currentToolCall.argsString += tc.function.arguments; }
+
+                    if (data.usageMetadata) updateTokens(data.usageMetadata);
+                    
+                    const incomingParts = data.candidates?.[0]?.content?.parts || [];
+                    incomingParts.forEach((part: any, index: number) => {
+                      if (!modelParts[index]) {
+                        modelParts[index] = { ...part };
+                      } else {
+                        // Merge incremental updates
+                        if (part.text) modelParts[index].text = (modelParts[index].text || "") + part.text;
+                        if (part.thought) modelParts[index].thought = (modelParts[index].thought || "") + part.thought;
+                        if (part.functionCall) {
+                          modelParts[index].functionCall = { 
+                            ...(modelParts[index].functionCall || {}), 
+                            ...part.functionCall 
+                          };
+                        }
                       }
-                    }
+
+                      // Update UI
+                      if (part.text) {
+                        setStatus("Typing...");
+                        if (!currentTextId) currentTextId = addDisplayMsg('assistant', "", undefined, true);
+                        addDisplayMsg('assistant', part.text, currentTextId, true);
+                      }
+                      if (part.thought) {
+                        setStatus("Thinking deeply...");
+                        if (!currentThoughtId) currentThoughtId = addDisplayMsg('thought', "", undefined, true);
+                        addDisplayMsg('thought', part.thought, currentThoughtId, true);
+                      }
+                    });
+                  } catch (e) {
+                    if (e instanceof Error && e.message.includes("Safety")) throw e;
                   }
-                } catch (e) {}
+                }
               }
             }
+          } else {
+            const stream = await callOpenAIStream(currentConversation);
+            if (!stream) break;
+            const reader = stream.getReader();
+            const decoder = new TextDecoder();
+            let currentToolCall: any = null;
+
+            while (!stopFlagRef.current) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              const chunk = decoder.decode(value);
+              const lines = chunk.split('\n');
+              
+              for (const line of lines) {
+                if (line.startsWith('data: ') && line.trim() !== 'data: [DONE]') {
+                  try {
+                    const data = JSON.parse(line.substring(6));
+                    if (data.usage) updateTokens(data.usage);
+                    const delta = data.choices?.[0]?.delta;
+                    if (delta) {
+                      if (delta.content) {
+                        setStatus("Typing...");
+                        if (!currentTextId) currentTextId = addDisplayMsg('assistant', "", undefined, true);
+                        addDisplayMsg('assistant', delta.content, currentTextId, true);
+                        let textPart = modelParts.find(p => p.text !== undefined);
+                        if (!textPart) { textPart = { text: "" }; modelParts.push(textPart); }
+                        textPart.text += delta.content;
+                      }
+                      if (delta.tool_calls) {
+                        for (const tc of delta.tool_calls) {
+                          if (tc.function?.name) { currentToolCall = { name: tc.function.name, argsString: tc.function.arguments || "" }; }
+                          else if (tc.function?.arguments && currentToolCall) { currentToolCall.argsString += tc.function.arguments; }
+                        }
+                      }
+                    }
+                  } catch (e) {}
+                }
+              }
+            }
+            if (currentToolCall) {
+              try { modelParts.push({ functionCall: { name: currentToolCall.name, args: JSON.parse(currentToolCall.argsString) } }); }
+              catch(e) { console.error("Failed to parse tool args", currentToolCall.argsString); }
+            }
           }
-          if (currentToolCall) {
-            try { modelParts.push({ functionCall: { name: currentToolCall.name, args: JSON.parse(currentToolCall.argsString) } }); }
-            catch(e) { console.error("Failed to parse tool args", currentToolCall.argsString); }
+        } catch (err: any) {
+          let userMsg = "Agent Error: " + err.message;
+          if (err.message.includes("429") || err.message.toLowerCase().includes("quota")) {
+            userMsg = "⚠️ API QUOTA EXCEEDED: You have hit the rate limit or run out of credits. Please wait a moment or check your API billing.";
+          } else if (err.message.includes("401") || err.message.toLowerCase().includes("invalid api key")) {
+            userMsg = "⚠️ INVALID API KEY: Please check your credentials in the settings (⚙️).";
+          } else if (err.message.toLowerCase().includes("safety")) {
+            userMsg = "⚠️ SAFETY FILTER: The AI provider blocked this response due to safety constraints.";
           }
+          
+          addDisplayMsg('system', userMsg);
+          setStatus("API Error");
+          setIsLoading(false);
+          return;
         }
 
         if (currentTextId) finalizeStreamingMsg(currentTextId);
