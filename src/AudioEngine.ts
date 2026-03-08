@@ -85,6 +85,11 @@ export class AudioEngine {
       this.workletNode.port.onmessage = (event) => {
         if (event.data.type === 'telemetry') {
           this.liveState = event.data.state;
+          // Debugging
+          if (Object.keys(this.liveState).length > 0 && !window.__telemetryLogged) {
+             console.log("Telemetry Received. Samples:", Object.keys(this.liveState));
+             window.__telemetryLogged = true;
+          }
           if (event.data.probes) {
             this.probedStates = event.data.probes;
           }
