@@ -30,12 +30,20 @@ export class AudioEngine {
   private probedStates: Record<string, Float32Array> = {};
   
   private sources: InputSource[] = [];
-  private inputStream: MediaStream | null = null;
-  private inputNode: MediaStreamAudioSourceNode | null = null;
+
+  // Listeners for UI state updates
+  private stateListeners: ((state: Record<string, any>) => void)[] = [];
 
   constructor() {
     this.scopeBuffer = new Float32Array(2048);
     this.spectrumBuffer = new Uint8Array(1024);
+  }
+
+  public onStateUpdate(callback: (state: Record<string, any>) => void) {
+    this.stateListeners.push(callback);
+    return () => {
+      this.stateListeners = this.stateListeners.filter(l => l !== callback);
+    };
   }
 
   public async getDevices() {
@@ -84,12 +92,10 @@ export class AudioEngine {
 
       this.workletNode.port.onmessage = (event) => {
         if (event.data.type === 'telemetry') {
-          this.liveState = event.data.state;
-          // Debugging
-          if (Object.keys(this.liveState).length > 0 && !window.__telemetryLogged) {
-             console.log("Telemetry Received. Samples:", Object.keys(this.liveState));
-             window.__telemetryLogged = true;
-          }
+          this.liveState = event.data.state || {};
+          // Notify listeners
+          this.stateListeners.forEach(l => l(this.liveState));
+          
           if (event.data.probes) {
             this.probedStates = event.data.probes;
           }
@@ -106,19 +112,6 @@ export class AudioEngine {
         data: { sampleRate: this.audioContext.sampleRate } 
       });
       this.workletNode.port.postMessage({ type: 'setSources', data: { sources: this.sources } });
-    }
-    
-    const liveSource = this.sources.find(s => s.type === 'live');
-    if (liveSource && this.audioContext && this.workletNode) {
-      try {
-        if (this.inputStream) this.inputStream.getTracks().forEach(t => t.stop());
-        this.inputStream = await navigator.mediaDevices.getUserMedia({
-          audio: liveSource.deviceId ? { deviceId: { exact: liveSource.deviceId } } : true
-        });
-        if (this.inputNode) this.inputNode.disconnect();
-        this.inputNode = this.audioContext.createMediaStreamSource(this.inputStream);
-        this.inputNode.connect(this.workletNode);
-      } catch (err) { console.error(err); }
     }
     
     if (this.audioContext.state === 'suspended') {

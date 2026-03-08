@@ -8,6 +8,7 @@ import ScopeView from './ScopeView';
 import LLMPane from './LLMPane';
 import VirtualMIDI from './VirtualMIDI';
 import StateInspector from './StateInspector';
+import MultiScopeView from './MultiScopeView';
 import './App.css';
 
 const PRESETS: Record<string, string> = {
@@ -342,7 +343,7 @@ const App: React.FC = () => {
 
   const toggleProbe = (name: string) => {
     setActiveProbes(prev => {
-      const next = prev.includes(name) ? prev.filter(p => p !== name) : [...prev, name].slice(-1);
+      const next = prev.includes(name) ? prev.filter(p => p !== name) : [...prev, name].slice(-6); // Limit to 6 traces
       audioEngineRef.current.setProbes(next);
       return next;
     });
@@ -472,7 +473,7 @@ const App: React.FC = () => {
                 code={code} 
                 onChange={handleCodeChange} 
                 markers={editorMarkers} 
-                getLiveState={() => audioEngineRef.current.getLiveState()}
+                onStateUpdate={(cb) => audioEngineRef.current.onStateUpdate(cb)}
               />
             </div>
             
@@ -557,11 +558,24 @@ const App: React.FC = () => {
             </div>
             <div className="llm-section">
               {showInspector ? (
-                <StateInspector 
-                  getLiveState={() => audioEngineRef.current.getLiveState()} 
-                  onProbe={toggleProbe}
-                  activeProbes={activeProbes}
-                />
+                <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                  <div style={{ flex: 1, minHeight: 0 }}>
+                    <StateInspector 
+                      onStateUpdate={(cb) => audioEngineRef.current.onStateUpdate(cb)} 
+                      onProbe={toggleProbe}
+                      activeProbes={activeProbes}
+                    />
+                  </div>
+                  {activeProbes.length > 0 && (
+                    <div className="mini-scope-section" style={{ height: '300px', padding: '10px', background: '#111', borderTop: '1px solid #333' }}>
+                      <div className="section-title"><Activity size={12} /> PROBE SCOPE (MULTI-TRACE)</div>
+                      <MultiScopeView 
+                        probes={activeProbes} 
+                        getProbedData={(name) => audioEngineRef.current.getProbedStates()[name] || null} 
+                      />
+                    </div>
+                  )}
+                </div>
               ) : (
                 <LLMPane onGenerateCode={handleCodeChange} systemPrompt={SYSTEM_PROMPT} />
               )}

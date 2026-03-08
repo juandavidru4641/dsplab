@@ -6,7 +6,7 @@ interface VultEditorProps {
   code: string;
   onChange: (value: string | undefined) => void;
   markers?: any[];
-  getLiveState: () => Record<string, any>;
+  onStateUpdate: (callback: (state: Record<string, any>) => void) => () => void;
 }
 
 interface HoverData {
@@ -16,19 +16,20 @@ interface HoverData {
   value: any;
 }
 
-const VultEditor: React.FC<VultEditorProps> = ({ code, onChange, markers = [], getLiveState }) => {
+const VultEditor: React.FC<VultEditorProps> = ({ code, onChange, markers = [], onStateUpdate }) => {
   const lastCodeRef = useRef(code);
   const monacoRef = useRef<Monaco | null>(null);
   const editorRef = useRef<any>(null);
   const [history, setHistory] = useState<Record<string, number[]>>({});
   const [hoverData, setHoverData] = useState<HoverData | null>(null);
+  const currentStateRef = useRef<Record<string, any>>({});
 
-  // High-frequency history buffer for sparklines and hover updates
+  // Unified 15Hz subscription for sparklines and hover
   useEffect(() => {
-    const interval = setInterval(() => {
-      const state = getLiveState();
-      
-      // Update history
+    const unsubscribe = onStateUpdate((state) => {
+      currentStateRef.current = state;
+
+      // Update history for sparklines
       setHistory(prev => {
         const next = { ...prev };
         for (const key in state) {
@@ -40,16 +41,16 @@ const VultEditor: React.FC<VultEditorProps> = ({ code, onChange, markers = [], g
         return next;
       });
 
-      // Update hover data if active
+      // Update hover data value if currently hovering
       setHoverData(current => {
         if (!current) return null;
         const newValue = state[current.word];
         if (newValue === undefined) return null;
         return { ...current, value: newValue };
       });
-    }, 50); // 20fps updates
-    return () => clearInterval(interval);
-  }, [getLiveState]);
+    });
+    return unsubscribe;
+  }, [onStateUpdate]);
 
   useEffect(() => {
     if (monacoRef.current && editorRef.current) {
@@ -80,7 +81,7 @@ const VultEditor: React.FC<VultEditorProps> = ({ code, onChange, markers = [], g
       if (e.target && e.target.range) {
         const word = editor.getModel().getWordAtPosition(e.target.range.getStartPosition());
         if (word) {
-          const state = getLiveState();
+          const state = currentStateRef.current;
           if (state[word.word] !== undefined) {
             setHoverData({
               word: word.word,
