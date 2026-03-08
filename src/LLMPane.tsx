@@ -442,15 +442,29 @@ const LLMPane: React.FC<LLMPaneProps> = ({
   };
 
   const callGeminiStream = async (currentMessages: Message[]) => {
+    // Map history to Gemini API format, ensuring each part object 
+    // contains ONLY one data field (oneof constraint).
+    const mappedContents = currentMessages.map(m => ({
+      role: m.role === 'user' ? 'user' : 'model',
+      parts: m.parts.flatMap(p => {
+        const apiParts: any[] = [];
+        if (p.thought) apiParts.push({ thought: p.thought });
+        if (p.text) apiParts.push({ text: p.text });
+        if (p.functionCall) apiParts.push({ functionCall: p.functionCall });
+        if (p.functionResponse) apiParts.push({ functionResponse: p.functionResponse });
+        if (apiParts.length === 0) return [{ text: "" }];
+        return apiParts;
+      })
+    }));
+
     const payload = {
-      contents: currentMessages,
+      contents: mappedContents,
       systemInstruction: { 
         parts: [{ text: systemPrompt + "\nALWAYS be verbose and detailed about your DSP logic and actions. Explain WHY you are making changes." }] 
       },
       tools: [{ functionDeclarations: getToolsDef() }],
       generationConfig: { temperature: 0.1 }
     };
-
     abortControllerRef.current = new AbortController();
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:streamGenerateContent?alt=sse&key=${apiKey}`, {
       method: 'POST',
