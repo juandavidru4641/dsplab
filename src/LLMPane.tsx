@@ -267,16 +267,26 @@ const LLMPane: React.FC<LLMPaneProps> = ({
       },
       {
         name: "ask_user",
-        description: "Asks the user a question.",
+        description: "Asks the user a question. Can include multiple choice options for quick responses.",
         parameters: {
           type: "OBJECT",
           properties: {
-            question: { type: "STRING", description: "The question to ask." }
+            question: { type: "STRING", description: "The question to ask the user." },
+            options: { 
+              type: "ARRAY", 
+              items: { 
+                type: "OBJECT",
+                properties: {
+                  label: { type: "STRING", description: "Display text for the button." },
+                  value: { type: "STRING", description: "Technical value returned to the agent when selected." }
+                }
+              },
+              description: "Optional list of predefined choices for the user."
+            }
           },
           required: ["question"]
         }
-      },
-      {
+      },      {
         name: "user_message",
         description: "Displays a status message or update to the user.",
         parameters: {

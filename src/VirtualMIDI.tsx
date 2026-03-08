@@ -11,7 +11,7 @@ interface VirtualMIDIProps {
   ccLabels: Record<number, string>;
 }
 
-const KEY_WIDTH = 18; // Targeted width for a white key - ultra compact
+const KEY_WIDTH = 22; // Targeted width for a white key
 
 const VirtualMIDI: React.FC<VirtualMIDIProps> = ({ onCC, onNoteOn, onNoteOff, ccLabels }) => {
   const [kbEnabled, setKbEnabled] = useState(false);
@@ -109,7 +109,7 @@ const VirtualMIDI: React.FC<VirtualMIDIProps> = ({ onCC, onNoteOn, onNoteOff, cc
         })}
       </div>
 
-      <div className="keyboard-container" ref={containerRef} style={{ height: '50px', background: '#000', padding: '2px 10px', overflow: 'hidden' }}>
+      <div className="keyboard-container" ref={containerRef} style={{ height: '70px', background: '#000', padding: '2px 10px', overflow: 'hidden' }}>
         {width > 0 && (
           <Piano
             noteRange={{ first: firstNote, last: lastNote }}

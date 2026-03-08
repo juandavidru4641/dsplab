@@ -795,7 +795,7 @@ const App: React.FC = () => {
           </div>
 
           <div className="spacer" />
-          <div className="status-badge"><Activity size={14} />{status}</div>
+          <div className={`status-badge ${status === 'Compile Error' ? 'error' : ''}`}><Activity size={14} />{status}</div>
         </div>
 
         <div className="editor-layout">

@@ -94,7 +94,14 @@
 .control-group .label { font-size: 8px; color: #888; }
 .control-group select { background: #252526; border: 1px solid #444; color: #fff; font-size: 10px; padding: 2px; border-radius: 2px; }
 
-.status-badge { display: flex; align-items: center; gap: 6px; background: #252526; padding: 4px 10px; border-radius: 15px; font-size: 10px; color: #aaa; border: 1px solid #333; }
+.status-badge { display: flex; align-items: center; gap: 6px; background: #252526; padding: 4px 10px; border-radius: 15px; font-size: 10px; color: #aaa; border: 1px solid #333; transition: all 0.3s; }
+.status-badge.error { background: #441111; color: #ff4444; border-color: #ff4444; animation: flash-red 1s infinite; }
+
+@keyframes flash-red {
+  0% { box-shadow: 0 0 0px #ff0000; }
+  50% { box-shadow: 0 0 10px #ff0000; }
+  100% { box-shadow: 0 0 0px #ff0000; }
+}
 
 .editor-layout { 
   flex: 1; 
