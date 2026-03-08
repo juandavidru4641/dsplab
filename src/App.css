@@ -322,14 +322,60 @@
   color: #ffcc00;
 }
 
-/* KEYBOARD */
-.keyboard-container {
+/* SEQUENCER */
+.sequencer-container {
   display: flex;
-  overflow: hidden;
-  width: 100%;
-  background: #000;
-  border-radius: 4px;
+  flex-direction: column;
+  background: #111;
+  border-top: 1px solid #333;
+  padding: 8px 12px;
+  gap: 8px;
+  min-height: 80px;
 }
+
+.step-grid {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.step-unit {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: center;
+}
+
+.step-led {
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  background: #252526;
+  border: 1px solid #333;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.step-led.active {
+  background: #ffcc00;
+  box-shadow: 0 0 8px rgba(255, 204, 0, 0.3);
+}
+
+.step-led.current {
+  border-color: #00ff00;
+}
+
+.step-note-select {
+  width: 30px;
+  font-size: 7px;
+  background: #000;
+  color: #888;
+  border: 1px solid #333;
+  outline: none;
+  border-radius: 2px;
+}
+
 
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 .animate-spin { animation: spin 1s linear infinite; }

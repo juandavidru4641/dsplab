@@ -9,6 +9,8 @@ import LLMPane from './LLMPane';
 import VirtualMIDI from './VirtualMIDI';
 import StateInspector from './StateInspector';
 import MultiScopeView from './MultiScopeView';
+import Sequencer from './Sequencer';
+import type { Step } from './Sequencer';
 import { Knob } from './Knob';
 import './App.css';
 
@@ -398,8 +400,8 @@ LABORATORY WORKFLOW:
 - Plan: Use 'write_plan' to document your approach before making complex changes.
 - Edit: Use 'apply_diff' for small surgical fixes or 'edit_lines' for block-level changes. Use 'update_code' only for complete rewrites.
 - History: Use 'store_snapshot' to save a named restore point before making risky or large changes. 
-- Test: Use 'set_knob' or 'send_midi_cc' to manipulate parameters or 'trigger_generator' to test transient response.
-- Verify: Use 'get_live_telemetry' for internal state, 'get_spectrum_data' for frequency analysis, 'get_peak_frequencies' to find dominant pitches, and 'get_audio_metrics' to analyze signal quality. 
+- Test: Use 'set_knob' or 'send_midi_cc' to manipulate parameters, 'trigger_generator' to test transient response, or 'configure_sequencer' to program a melody for testing polyphony and envelopes.
+- Verify: Use 'get_live_telemetry' for internal state, 'get_spectrum_data' for frequency analysis, 'get_peak_frequencies' to find dominant pitches, 'get_audio_metrics' to analyze signal quality, and 'get_sequencer_state' to verify the current test pattern.
 
 AUTONOMOUS EXECUTION:
 - After calling 'get_current_code', you MUST immediately proceed to the 'Edit' phase. Do not end the turn just to say you have the code. 
@@ -434,6 +436,10 @@ const App: React.FC = () => {
   const [originalCode, setOriginalCode] = useState('');
   const [showHistory, setShowHistory] = useState(false);
   const [codeHistory, setCodeHistory] = useState<{timestamp: number, code: string, msg: string}[]>([]);
+  
+  const [seqSteps, setSeqSteps] = useState<Step[]>(Array.from({ length: 16 }, () => ({ active: false, note: 60 })));
+  const [seqBpm, setSeqBpm] = useState(120);
+  const [seqPlaying, setSeqPlaying] = useState(false);
   
   const [inputs, setInputs] = useState<InputSource[]>([]);
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
@@ -969,6 +975,17 @@ const App: React.FC = () => {
               </div>
             </div>
 
+            <Sequencer 
+              steps={seqSteps}
+              setSteps={setSeqSteps}
+              bpm={seqBpm}
+              setBpm={setSeqBpm}
+              isPlaying={seqPlaying}
+              setIsPlaying={setSeqPlaying}
+              onNoteOn={(note, vel) => audioEngineRef.current.sendNoteOn(note, vel, 0)}
+              onNoteOff={(note) => audioEngineRef.current.sendNoteOff(note, 0)}
+            />
+
             <VirtualMIDI 
               onCC={(cc, val) => audioEngineRef.current.sendControlChange(cc, val, 0)}
               onNoteOn={(note, vel) => audioEngineRef.current.sendNoteOn(note, vel, 0)}
@@ -1067,7 +1084,13 @@ const App: React.FC = () => {
                     setActiveProbes(probes);
                     audioEngineRef.current.setProbes(probes);
                   }}
+                  onConfigureSequencer={(bpm, steps, playing) => {
+                    if (bpm !== undefined) setSeqBpm(bpm);
+                    if (steps !== undefined) setSeqSteps(steps);
+                    if (playing !== undefined) setSeqPlaying(playing);
+                  }}
                   getPresets={() => Object.keys(PRESETS)}
+                  getSequencerState={() => ({ bpm: seqBpm, steps: seqSteps, playing: seqPlaying })}
                   getTelemetry={() => audioEngineRef.current.getLiveState()}
                   getSpectrum={() => Array.from(audioEngineRef.current.getSpectrumData())}
                   getPeakFrequencies={(count) => audioEngineRef.current.getPeakFrequencies(count)}

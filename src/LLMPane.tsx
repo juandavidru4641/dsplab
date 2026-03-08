@@ -10,7 +10,9 @@ interface LLMPaneProps {
   onLoadPreset: (name: string) => void;
   onSaveSnapshot: (message: string) => void;
   onSetProbes: (probes: string[]) => void;
+  onConfigureSequencer: (bpm?: number, steps?: any[], playing?: boolean) => void;
   getPresets: () => string[];
+  getSequencerState: () => any;
   getTelemetry: () => Record<string, any>;
   getSpectrum: () => number[];
   getPeakFrequencies: (count?: number) => {energy: number, frequency: number}[];
@@ -28,7 +30,8 @@ type Message = { role: 'user' | 'model', parts: MessagePart[] };
 
 const LLMPane: React.FC<LLMPaneProps> = ({ 
   currentCode, onUpdateCode, onSetKnob, onTriggerGenerator, 
-  onConfigureInput, onLoadPreset, onSaveSnapshot, onSetProbes, getPresets, getTelemetry, getSpectrum, getPeakFrequencies, getAudioMetrics, systemPrompt 
+  onConfigureInput, onLoadPreset, onSaveSnapshot, onSetProbes, onConfigureSequencer, 
+  getPresets, getSequencerState, getTelemetry, getSpectrum, getPeakFrequencies, getAudioMetrics, systemPrompt 
 }) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -247,6 +250,33 @@ const LLMPane: React.FC<LLMPaneProps> = ({
           properties: { name: { type: "STRING", description: "The preset name." } },
           required: ["name"]
         }
+      },
+      {
+        name: "configure_sequencer",
+        description: "Configures the note roll sequencer. Use this to test patches with melodies.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            bpm: { type: "NUMBER", description: "Tempo in BPM." },
+            playing: { type: "BOOLEAN", description: "Whether the sequencer should be running." },
+            steps: {
+              type: "ARRAY",
+              items: {
+                type: "OBJECT",
+                properties: {
+                  active: { type: "BOOLEAN" },
+                  note: { type: "NUMBER", description: "MIDI note number." }
+                }
+              },
+              description: "Full array of 16 steps."
+            }
+          }
+        }
+      },
+      {
+        name: "get_sequencer_state",
+        description: "Returns the current state of the sequencer (BPM, steps, playing status).",
+        parameters: { type: "OBJECT", properties: {} }
       },
       {
         name: "list_presets",
@@ -624,6 +654,8 @@ const LLMPane: React.FC<LLMPaneProps> = ({
             'get_vult_reference': 'Consulting language guide',
             'multi_edit': 'Performing batch edits',
             'set_probes': 'Configuring logic analyzer',
+            'configure_sequencer': 'Programming sequencer',
+            'get_sequencer_state': 'Reading sequencer state',
             'tell': 'Communicating'
           };
 
@@ -746,6 +778,11 @@ const LLMPane: React.FC<LLMPaneProps> = ({
               addDisplayMsg('system', `📁 Loading library preset: "${pName}"`);
               onLoadPreset(pName);
               result = { success: true };
+            } else if (name === 'configure_sequencer') {
+              onConfigureSequencer(fc.args.bpm, fc.args.steps, fc.args.playing);
+              result = { success: true };
+            } else if (name === 'get_sequencer_state') {
+              result = { state: getSequencerState() };
             } else if (name === 'list_presets') {
               addDisplayMsg('system', `📚 Browsing preset library`);
               result = { presets: getPresets() };
