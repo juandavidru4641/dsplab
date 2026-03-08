@@ -246,13 +246,17 @@ export class AudioEngine {
     if (!this.analyser || !this.audioContext) return null;
     this.analyser.getByteFrequencyData(this.spectrumBuffer as any);
     
-    const bins = Array.from(this.spectrumBuffer);
+    const bins = this.spectrumBuffer;
     const binFreq = this.audioContext.sampleRate / this.analyser.fftSize;
+    const binCount = this.analyser.frequencyBinCount;
     
     // Find fundamental (peak with highest energy between 40Hz and 5kHz)
     let maxEnergy = -1;
     let fundamentalBin = -1;
-    for (let i = Math.floor(40/binFreq); i < Math.floor(5000/binFreq); i++) {
+    const startBin = Math.floor(40/binFreq);
+    const endBin = Math.min(binCount, Math.floor(5000/binFreq));
+
+    for (let i = startBin; i < endBin; i++) {
       if (bins[i] > maxEnergy) {
         maxEnergy = bins[i];
         fundamentalBin = i;
@@ -268,19 +272,21 @@ export class AudioEngine {
       const targetFreq = fundamental * h;
       const targetBin = Math.round(targetFreq / binFreq);
       
-      if (targetBin >= bins.length) break;
+      if (targetBin >= binCount) break;
 
       // Look at small window around target bin for the local peak
       let localMax = 0;
-      for (let w = -1; w <= 1; w++) {
-        if (bins[targetBin + w] > localMax) localMax = bins[targetBin + w];
+      const windowStart = Math.max(0, targetBin - 1);
+      const windowEnd = Math.min(binCount - 1, targetBin + 1);
+      for (let w = windowStart; w <= windowEnd; w++) {
+        if (bins[w] > localMax) localMax = bins[w];
       }
 
       harmonics.push({
         harmonic: h,
         frequency: Math.round(targetFreq),
         energy: localMax,
-        relative_db: 20 * Math.log10(localMax / maxEnergy + 1e-6)
+        relative_db: 20 * Math.log10((localMax + 1e-6) / (maxEnergy + 1e-6))
       });
     }
 
