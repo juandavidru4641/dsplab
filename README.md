@@ -1,6 +1,9 @@
 # Vult-O-Mat
 
-A professional-grade web-based micro-IDE for testing, making, and rapid prototyping of [Vult DSP](https://modlfo.github.io/vult/) code.
+A web-based micro-IDE for testing, making, and rapid prototyping of [Vult DSP](https://modlfo.github.io/vult/) code.
+
+<img width="1280" height="770" alt="image" src="https://github.com/user-attachments/assets/abd200ee-9447-456b-9405-b08b28c2e7a6" />
+
 
 ## Features
 
