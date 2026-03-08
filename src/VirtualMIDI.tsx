@@ -102,7 +102,7 @@ const VirtualMIDI: React.FC<VirtualMIDIProps> = ({ onCC, onNoteOn, onNoteOff, cc
                 value={ccValues[cc] || 64} 
                 min={0} 
                 max={127} 
-                size={52} // Ergonomic medium size
+                size={44} // Compact professional size
                 onChange={(val) => handleCCChange(cc, val)} 
               />
             </div>

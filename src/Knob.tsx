@@ -97,15 +97,15 @@ export const Knob: React.FC<KnobProps> = ({ value, min, max, label, onChange, si
   const paramName = ccMatch ? ccMatch[2] : label;
 
   return (
-    <div className="knob-unit" style={{ width: size, userSelect: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px' }}>
+    <div className="knob-unit" style={{ width: size + 10, userSelect: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px' }}>
       {ccNum && (
-        <div style={{ fontSize: '10px', fontWeight: '900', color: '#ffcc00', lineHeight: '1', marginBottom: '1px' }}>
+        <div style={{ fontSize: '11px', fontWeight: '900', color: '#ffcc00', lineHeight: '1', marginBottom: '1px' }}>
           {ccNum}
         </div>
       )}
       <div className="knob-label" style={{ 
-        fontSize: '7px', 
-        color: '#888', 
+        fontSize: '9px', 
+        color: '#ccc', 
         marginBottom: '2px', 
         textAlign: 'center', 
         whiteSpace: 'nowrap', 
@@ -113,7 +113,8 @@ export const Knob: React.FC<KnobProps> = ({ value, min, max, label, onChange, si
         textOverflow: 'ellipsis', 
         maxWidth: '100%',
         fontWeight: 'bold',
-        textTransform: 'uppercase'
+        textTransform: 'uppercase',
+        letterSpacing: '0.5px'
       }}>
         {paramName}
       </div>
