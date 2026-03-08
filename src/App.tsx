@@ -946,6 +946,7 @@ const App: React.FC = () => {
                   getPresets={() => Object.keys(PRESETS)}
                   getTelemetry={() => audioEngineRef.current.getLiveState()}
                   getSpectrum={() => Array.from(audioEngineRef.current.getSpectrumData())}
+                  getAudioMetrics={() => audioEngineRef.current.getAudioMetrics()}
                   systemPrompt={SYSTEM_PROMPT} 
                 />
               )}

@@ -11,6 +11,7 @@ interface LLMPaneProps {
   getPresets: () => string[];
   getTelemetry: () => Record<string, any>;
   getSpectrum: () => number[];
+  getAudioMetrics: () => Record<string, number>;
   systemPrompt: string;
 }
 
@@ -24,7 +25,7 @@ type Message = { role: 'user' | 'model', parts: MessagePart[] };
 
 const LLMPane: React.FC<LLMPaneProps> = ({ 
   currentCode, onUpdateCode, onSetKnob, onTriggerGenerator, 
-  onConfigureInput, onLoadPreset, getPresets, getTelemetry, getSpectrum, systemPrompt 
+  onConfigureInput, onLoadPreset, getPresets, getTelemetry, getSpectrum, getAudioMetrics, systemPrompt 
 }) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -58,16 +59,12 @@ const LLMPane: React.FC<LLMPaneProps> = ({
   useEffect(() => {
     const savedProvider = localStorage.getItem('llm_provider') as 'gemini' | 'openai';
     if (savedProvider) setProvider(savedProvider);
-    
     const savedEndpoint = localStorage.getItem('llm_endpoint');
     if (savedEndpoint) setEndpoint(savedEndpoint);
-
     const savedKey = localStorage.getItem('llm_api_key');
     if (savedKey) setApiKey(savedKey);
-
     const savedModel = localStorage.getItem('llm_model_name');
     if (savedModel) setModelName(savedModel);
-
     const savedTokens = localStorage.getItem('llm_tokens');
     if (savedTokens) setTokens(JSON.parse(savedTokens));
   }, []);
@@ -259,6 +256,11 @@ const LLMPane: React.FC<LLMPaneProps> = ({
         parameters: { type: "OBJECT", properties: {} }
       },
       {
+        name: "get_audio_metrics",
+        description: "Retrieves real-time audio metrics: Peak Level, RMS, Clipping Count, and Headroom (dB). Use this to check if the output is clipping or distorted.",
+        parameters: { type: "OBJECT", properties: {} }
+      },
+      {
         name: "ask_user",
         description: "Asks the user a question.",
         parameters: {
@@ -271,7 +273,7 @@ const LLMPane: React.FC<LLMPaneProps> = ({
       },
       {
         name: "user_message",
-        description: "Displays a status message or update to the user.",
+        description: "Displays a status message or update to the user about what you are currently doing.",
         parameters: {
           type: "OBJECT",
           properties: {
@@ -517,7 +519,7 @@ const LLMPane: React.FC<LLMPaneProps> = ({
                 }
               } else {
                 addDisplayMsg('system', `❌ Error: 'old_string' not found.`);
-                result = { success: false, error: "Pattern not found. Ensure exact match including whitespace." };
+                result = { success: false, error: "Pattern not found." };
               }
             } else if (name === 'edit_lines') {
               addDisplayMsg('system', `🛠️ Tool: edit_lines(${fc.args.start_line}-${fc.args.end_line})`);
@@ -553,6 +555,10 @@ const LLMPane: React.FC<LLMPaneProps> = ({
               addDisplayMsg('system', `🛠️ Tool: set_knob(${fc.args.cc}, ${fc.args.value})`);
               onSetKnob(fc.args.cc, fc.args.value);
               result = { success: true };
+            } else if (name === 'send_midi_cc') {
+              addDisplayMsg('system', `🛠️ Tool: send_midi_cc(${fc.args.cc}, ${fc.args.value})`);
+              onSetKnob(fc.args.cc, fc.args.value);
+              result = { success: true };
             } else if (name === 'trigger_generator') {
               addDisplayMsg('system', `🛠️ Tool: trigger_generator(${fc.args.index})`);
               onTriggerGenerator(fc.args.index);
@@ -571,10 +577,8 @@ const LLMPane: React.FC<LLMPaneProps> = ({
               result = { telemetry: getTelemetry() };
             } else if (name === 'get_spectrum_data') {
               result = { spectrum: getSpectrum() };
-            } else if (name === 'send_midi_cc') {
-              addDisplayMsg('system', `🛠️ Tool: send_midi_cc(${fc.args.cc}, ${fc.args.value})`);
-              onSetKnob(fc.args.cc, fc.args.value);
-              result = { success: true };
+            } else if (name === 'get_audio_metrics') {
+              result = { metrics: getAudioMetrics() };
             } else if (name === 'user_message') {
               addDisplayMsg('assistant', fc.args.message);
               result = { success: true };
@@ -644,8 +648,8 @@ const LLMPane: React.FC<LLMPaneProps> = ({
             <Activity size={14} color={isLoading ? "#00ff00" : "#666"} className={isLoading ? "animate-spin" : ""} />
             <span style={{ fontWeight: 'bold', fontSize: '12px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '1px' }}>Vult Agent</span>
           </div>
-          <div style={{ fontSize: '8px', color: '#555', marginTop: '2px' }}>
-            TOKENS: {tokens.total.toLocaleString()} (P: {tokens.prompt.toLocaleString()} / C: {tokens.completion.toLocaleString()})
+          <div style={{ fontSize: '10px', color: '#00ff00', marginTop: '2px', fontWeight: 'bold', fontFamily: 'monospace' }}>
+            TOKENS: {tokens.total.toLocaleString()}
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
@@ -677,6 +681,12 @@ const LLMPane: React.FC<LLMPaneProps> = ({
           )}
           <input type="password" placeholder="API Key..." value={apiKey} onChange={(e) => handleSaveSettings(provider, endpoint, e.target.value, modelName)} style={{ background: '#111', border: '1px solid #444', color: '#fff', padding: '6px', borderRadius: '4px', fontSize: '11px', outline: 'none' }} />
           <input type="text" placeholder="Model ID..." value={modelName} onChange={(e) => handleSaveSettings(provider, endpoint, apiKey, e.target.value)} style={{ background: '#111', border: '1px solid #444', color: '#fff', padding: '6px', borderRadius: '4px', fontSize: '11px', outline: 'none' }} />
+          <button 
+            onClick={() => { setTokens({ prompt: 0, completion: 0, total: 0 }); localStorage.removeItem('llm_tokens'); }}
+            style={{ fontSize: '9px', background: '#444', color: '#fff', border: 'none', padding: '4px', borderRadius: '2px', cursor: 'pointer' }}
+          >
+            RESET TOKEN COUNTER
+          </button>
         </div>
       )}
 

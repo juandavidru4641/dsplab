@@ -29,6 +29,7 @@ export class AudioEngine {
   private isPlaying = false;
   private liveState: Record<string, any> = {};
   private probedStates: Record<string, number[]> = {};
+  private audioMetrics: Record<string, number> = { peak: 0, rms: 0, clippingCount: 0, headroom: 0 };
   
   private sources: InputSource[] = [];
 
@@ -108,6 +109,10 @@ export class AudioEngine {
           this.liveState = event.data.state || {};
           const probes = event.data.probes || {};
           
+          if (event.data.metrics) {
+            this.audioMetrics = event.data.metrics;
+          }
+          
           // Notify listeners with both state and probes
           this.stateListeners.forEach(l => l(this.liveState, probes));
           
@@ -175,6 +180,7 @@ export class AudioEngine {
 
   public getLiveState() { return this.liveState; }
   public getProbedStates() { return this.probedStates; }
+  public getAudioMetrics() { return this.audioMetrics; }
 
   public getScopeData() {
     if (this.analyser) {

@@ -38,12 +38,19 @@ class VultProcessor extends AudioWorkletProcessor {
     this.telemetryCounter = 0;
     
     this.activeProbes = [];
-    this.probeHistory = {}; // Store small chunks of data to send to UI
-    this.historySize = 128; // Send 128 points at a time (approx 15Hz if downsampled)
+    this.probeHistory = {}; 
     
     this.genStates = [];
     this.sampleBuffers = {}; 
     this.discoveredKeys = [];
+
+    // Audio Metrics
+    this.metrics = {
+      peak: 0,
+      rms: 0,
+      clippingCount: 0,
+      headroom: 0
+    };
 
     this.port.onmessage = (event) => {
       const { type, data } = event.data;
@@ -169,6 +176,10 @@ class VultProcessor extends AudioWorkletProcessor {
     const numSamples = outputL.length;
     const numInputs = this.sources.length;
 
+    let blockPeak = 0;
+    let sumSq = 0;
+    let blockClips = 0;
+
     for (let i = 0; i < numSamples; i++) {
       const inputValues = [];
       for (let s = 0; s < numInputs; s++) {
@@ -220,22 +231,41 @@ class VultProcessor extends AudioWorkletProcessor {
         try {
           const result = this.vultInstance._processFn.apply(this.vultInstance, inputValues);
           
+          let outL = 0;
+          let outR = 0;
           if (typeof result === 'object' && result !== null) {
-            outputL[i] = result.t0 || 0;
-            if (outputR) outputR[i] = result.t1 !== undefined ? result.t1 : outputL[i];
+            outL = result.t0 || 0;
+            outR = result.t1 !== undefined ? result.t1 : outL;
           } else {
-            outputL[i] = typeof result === 'number' ? result : 0;
-            if (outputR) outputR[i] = outputL[i];
+            outL = typeof result === 'number' ? result : 0;
+            outR = outL;
           }
+          outputL[i] = outL;
+          if (outputR) outputR[i] = outR;
+
+          // Calculate Metrics
+          const absL = Math.abs(outL);
+          const absR = Math.abs(outR);
+          const peak = Math.max(absL, absR);
+          if (peak > blockPeak) blockPeak = peak;
+          if (absL >= 0.999 || absR >= 0.999) blockClips++;
+          sumSq += (outL * outL + outR * outR) / 2;
+
         } catch (e) {
-          outputL[i] = outputR[i] = 0;
+          outputL[i] = (outputR ? outputR[i] = 0 : 0);
         }
       } else {
-        outputL[i] = outputR[i] = 0;
+        outputL[i] = (outputR ? outputR[i] = 0 : 0);
       }
     }
 
-    // TELEMETRY & PROBE COLLECTION (Downsampled to Block Rate)
+    // Update global metrics (running average/peak)
+    this.metrics.peak = blockPeak;
+    this.metrics.rms = Math.sqrt(sumSq / numSamples);
+    this.metrics.clippingCount = blockClips;
+    this.metrics.headroom = this.metrics.peak > 0 ? 20 * Math.log10(1.0 / this.metrics.peak) : 100;
+
+    // TELEMETRY & PROBE COLLECTION
     if (this.vultInstance) {
       this.activeProbes.forEach(p => {
         const parts = p.split('.');
@@ -253,8 +283,12 @@ class VultProcessor extends AudioWorkletProcessor {
       if (this.telemetryCounter++ > 23) {
         this.telemetryCounter = 0;
         const state = this.getQuickState();
-        this.port.postMessage({ type: 'telemetry', state, probes: this.probeHistory });
-        // Clear history after sending
+        this.port.postMessage({ 
+          type: 'telemetry', 
+          state, 
+          probes: this.probeHistory,
+          metrics: this.metrics
+        });
         for (const key in this.probeHistory) { this.probeHistory[key] = []; }
       }
     }
