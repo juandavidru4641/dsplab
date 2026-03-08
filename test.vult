@@ -1,0 +1,1 @@
+fun process(i:real) { return i; }
