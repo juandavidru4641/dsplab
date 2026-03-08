@@ -242,6 +242,51 @@ export class AudioEngine {
       .slice(0, count);
   }
 
+  public getHarmonics() {
+    if (!this.analyser || !this.audioContext) return null;
+    this.analyser.getByteFrequencyData(this.spectrumBuffer as any);
+    
+    const bins = Array.from(this.spectrumBuffer);
+    const binFreq = this.audioContext.sampleRate / this.analyser.fftSize;
+    
+    // Find fundamental (peak with highest energy between 40Hz and 5kHz)
+    let maxEnergy = -1;
+    let fundamentalBin = -1;
+    for (let i = Math.floor(40/binFreq); i < Math.floor(5000/binFreq); i++) {
+      if (bins[i] > maxEnergy) {
+        maxEnergy = bins[i];
+        fundamentalBin = i;
+      }
+    }
+
+    if (fundamentalBin === -1 || maxEnergy < 10) return { error: "No signal detected or fundamental too weak." };
+
+    const fundamental = fundamentalBin * binFreq;
+    const harmonics = [];
+
+    for (let h = 1; h <= 8; h++) {
+      const targetFreq = fundamental * h;
+      const targetBin = Math.round(targetFreq / binFreq);
+      
+      if (targetBin >= bins.length) break;
+
+      // Look at small window around target bin for the local peak
+      let localMax = 0;
+      for (let w = -1; w <= 1; w++) {
+        if (bins[targetBin + w] > localMax) localMax = bins[targetBin + w];
+      }
+
+      harmonics.push({
+        harmonic: h,
+        frequency: Math.round(targetFreq),
+        energy: localMax,
+        relative_db: 20 * Math.log10(localMax / maxEnergy + 1e-6)
+      });
+    }
+
+    return { fundamental: Math.round(fundamental), harmonics };
+  }
+
   public sendNoteOn(note: number, velocity: number, channel: number = 0) {
     if (this.workletNode) {
       this.workletNode.port.postMessage({ type: 'noteOn', data: { note, velocity, channel } });
