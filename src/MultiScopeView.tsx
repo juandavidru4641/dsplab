@@ -9,6 +9,7 @@ const MultiScopeView: React.FC<MultiScopeViewProps> = ({ probes, onStateUpdate }
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const historyRef = useRef<Record<string, number[]>>({});
   const [timebase, setTimebase] = useState(1000);
+  const dimensionsRef = useRef({ width: 800, height: 250, dpr: 1 });
 
   useEffect(() => {
     // Subscribe to fresh data packets only
@@ -31,6 +32,29 @@ const MultiScopeView: React.FC<MultiScopeViewProps> = ({ probes, onStateUpdate }
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) {
+        const dpr = window.devicePixelRatio || 1;
+        const width = Math.floor(entry.contentRect.width);
+        const height = Math.floor(entry.contentRect.height);
+        
+        if (width > 0 && height > 0) {
+          dimensionsRef.current = { width, height, dpr };
+          canvas.width = width * dpr;
+          canvas.height = height * dpr;
+        }
+      }
+    });
+    
+    observer.observe(canvas);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
@@ -41,50 +65,42 @@ const MultiScopeView: React.FC<MultiScopeViewProps> = ({ probes, onStateUpdate }
     ];
 
     const render = () => {
-      const dpr = window.devicePixelRatio || 1;
-      const rect = canvas.getBoundingClientRect();
-      if (canvas.width !== rect.width * dpr || canvas.height !== rect.height * dpr) {
-        canvas.width = rect.width * dpr;
-        canvas.height = rect.height * dpr;
-      }
+      const { width, height, dpr } = dimensionsRef.current;
       
       ctx.save();
       ctx.scale(dpr, dpr);
-      const drawWidth = rect.width;
-      const drawHeight = rect.height;
 
       ctx.fillStyle = '#050a05';
-      ctx.fillRect(0, 0, drawWidth, drawHeight);
+      ctx.fillRect(0, 0, width, height);
 
       // Grid
       ctx.strokeStyle = 'rgba(0, 255, 0, 0.15)';
       ctx.lineWidth = 0.5;
-      for (let i = 0; i < drawWidth; i += 40) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, drawHeight); ctx.stroke(); }
-      for (let i = 0; i < drawHeight; i += 20) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(drawWidth, i); ctx.stroke(); }
+      for (let i = 0; i < width; i += 40) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, height); ctx.stroke(); }
+      for (let i = 0; i < height; i += 20) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(width, i); ctx.stroke(); }
 
       if (probes.length === 0) {
         ctx.fillStyle = '#444';
         ctx.font = '10px monospace';
         ctx.textAlign = 'center';
-        ctx.fillText('NO PROBES ACTIVE', drawWidth / 2, drawHeight / 2);
+        ctx.fillText('NO PROBES ACTIVE', width / 2, height / 2);
         ctx.restore();
         animationFrame = requestAnimationFrame(render);
         return;
       }
 
-      const laneHeight = drawHeight / probes.length;
+      const laneHeight = height / probes.length;
 
       probes.forEach((probe, idx) => {
         let history = historyRef.current[probe] || [];
         if (history.length < 2) return;
 
-        // Visual crop to current timebase
         const displayHistory = history.slice(-timebase);
 
         if (idx > 0) {
           ctx.strokeStyle = 'rgba(0, 255, 0, 0.3)';
           ctx.lineWidth = 1;
-          ctx.beginPath(); ctx.moveTo(0, idx * laneHeight); ctx.lineTo(drawWidth, idx * laneHeight); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(0, idx * laneHeight); ctx.lineTo(width, idx * laneHeight); ctx.stroke();
         }
 
         const color = colors[idx % colors.length];
@@ -92,9 +108,8 @@ const MultiScopeView: React.FC<MultiScopeViewProps> = ({ probes, onStateUpdate }
         ctx.lineWidth = 1.5;
         ctx.beginPath();
 
-        const sliceWidth = drawWidth / (timebase - 1);
+        const sliceWidth = width / (timebase - 1);
         
-        // Fast Auto-scale logic
         let min = displayHistory[0];
         let max = displayHistory[0];
         for (let i = 1; i < displayHistory.length; i++) {
@@ -139,7 +154,7 @@ const MultiScopeView: React.FC<MultiScopeViewProps> = ({ probes, onStateUpdate }
   }, [probes, timebase]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', height: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
         <span style={{ fontSize: '8px', color: '#666' }}>TIMEBASE</span>
         <input 
@@ -148,7 +163,7 @@ const MultiScopeView: React.FC<MultiScopeViewProps> = ({ probes, onStateUpdate }
           style={{ width: '80px', height: '10px' }}
         />
       </div>
-      <div style={{ height: '250px', width: '100%', border: '1px solid #333', background: '#000', borderRadius: '8px', overflow: 'hidden' }}>
+      <div style={{ flex: 1, border: '1px solid #333', background: '#000', borderRadius: '8px', overflow: 'hidden', minHeight: 0 }}>
         <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
       </div>
     </div>

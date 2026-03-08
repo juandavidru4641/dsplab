@@ -14,7 +14,32 @@ const ScopeView: React.FC<ScopeViewProps> = ({ getScopeData, getSpectrumData, ge
   const [triggerMode, setTriggerMode] = useState<TriggerMode>('AUTO');
   const [threshold, setThreshold] = useState(0.0);
   const [gain, setGain] = useState(1.0);
-  const [zoom, setZoom] = useState(1.0); // 1.0 = show half the buffer, > 1.0 = show less (zoom in)
+  const [zoom, setZoom] = useState(1.0);
+  
+  const dimensionsRef = useRef({ width: 800, height: 200, dpr: 1 });
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) {
+        const dpr = window.devicePixelRatio || 1;
+        const width = Math.floor(entry.contentRect.width);
+        const height = Math.floor(entry.contentRect.height);
+        
+        if (width > 0 && height > 0) {
+          dimensionsRef.current = { width, height, dpr };
+          canvas.width = width * dpr;
+          canvas.height = height * dpr;
+        }
+      }
+    });
+    
+    observer.observe(canvas);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -25,21 +50,12 @@ const ScopeView: React.FC<ScopeViewProps> = ({ getScopeData, getSpectrumData, ge
     let animationFrame: number;
 
     const render = () => {
-      // High DPI scaling
-      const dpr = window.devicePixelRatio || 1;
-      const rect = canvas.getBoundingClientRect();
-      if (canvas.width !== rect.width * dpr || canvas.height !== rect.height * dpr) {
-        canvas.width = rect.width * dpr;
-        canvas.height = rect.height * dpr;
-      }
-
+      const { width, height, dpr } = dimensionsRef.current;
       const scopeData = getScopeData();
       const spectrumData = getSpectrumData();
       
       ctx.save();
       ctx.scale(dpr, dpr);
-      const width = rect.width;
-      const height = rect.height;
       const halfHeight = height / 2;
 
       ctx.fillStyle = '#050a05';
@@ -51,8 +67,7 @@ const ScopeView: React.FC<ScopeViewProps> = ({ getScopeData, getSpectrumData, ge
       for (let i = 0; i < width; i += 40) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, height); ctx.stroke(); }
       for (let i = 0; i < height; i += 40) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(width, i); ctx.stroke(); }
 
-      // Improved Spectrum
-      // We'll use a logarithmic-ish spacing for the spectrum
+      // Improved Spectrum (Log scale)
       const barCount = 128;
       const barWidth = width / barCount;
       const gradient = ctx.createLinearGradient(0, height, 0, 0);
@@ -62,8 +77,6 @@ const ScopeView: React.FC<ScopeViewProps> = ({ getScopeData, getSpectrumData, ge
       
       ctx.fillStyle = gradient;
       for (let i = 0; i < barCount; i++) {
-        // Map linear index to logarithmic frequency
-        // approx log scale: freq = min * (max/min)^(i/count)
         const sampleIdx = Math.floor(Math.pow(spectrumData.length, i / barCount));
         const val = spectrumData[sampleIdx];
         const barHeight = (val / 255) * height * 0.8;
@@ -82,11 +95,10 @@ const ScopeView: React.FC<ScopeViewProps> = ({ getScopeData, getSpectrumData, ge
         }
       }
 
-      // Zoom logic: determine how many samples to show
       const samplesToShow = Math.floor((scopeData.length / 2) / zoom);
       const displayData = scopeData.subarray(startIdx, startIdx + samplesToShow);
 
-      // Main Output Trace (Trace A)
+      // Main Output Trace
       ctx.shadowBlur = 10;
       ctx.shadowColor = '#00ff00';
       ctx.strokeStyle = '#00ff00';
@@ -101,7 +113,7 @@ const ScopeView: React.FC<ScopeViewProps> = ({ getScopeData, getSpectrumData, ge
       }
       ctx.stroke();
 
-      // Probed Trace (Trace B)
+      // Probed Trace
       if (probes.length > 0 && getProbedData) {
         const probedData = getProbedData(probes[0]);
         if (probedData && probedData.length > 0) {
@@ -132,61 +144,31 @@ const ScopeView: React.FC<ScopeViewProps> = ({ getScopeData, getSpectrumData, ge
   }, [getScopeData, getSpectrumData, getProbedData, probes, triggerMode, threshold, gain, zoom]);
 
   return (
-    <div style={{ position: 'relative', height: '200px', width: '100%', border: '1px solid #333', background: '#000', borderRadius: '8px', overflow: 'hidden' }}>
+    <div style={{ position: 'relative', height: '100%', width: '100%', border: '1px solid #333', background: '#000', borderRadius: '8px', overflow: 'hidden' }}>
       <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
-      
-      {/* Scope Controls */}
       <div style={{ 
-        position: 'absolute', 
-        top: '8px', 
-        right: '8px', 
-        display: 'flex', 
-        flexDirection: 'column',
-        gap: '6px', 
-        background: 'rgba(0,0,0,0.8)', 
-        padding: '6px 10px', 
-        borderRadius: '4px',
-        border: '1px solid #333',
-        zIndex: 10
+        position: 'absolute', top: '8px', right: '8px', display: 'flex', flexDirection: 'column',
+        gap: '6px', background: 'rgba(0,0,0,0.8)', padding: '6px 10px', borderRadius: '4px', border: '1px solid #333', zIndex: 10
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'space-between' }}>
           <span style={{ fontSize: '8px', color: '#666', fontWeight: 'bold' }}>SYNC</span>
-          <select 
-            value={triggerMode} 
-            onChange={(e) => setTriggerMode(e.target.value as TriggerMode)}
-            style={{ background: '#111', border: '1px solid #444', color: '#00ff00', fontSize: '9px', width: '50px' }}
-          >
+          <select value={triggerMode} onChange={(e) => setTriggerMode(e.target.value as TriggerMode)} style={{ background: '#111', border: '1px solid #444', color: '#00ff00', fontSize: '9px', width: '50px' }}>
             <option value="NONE">NONE</option>
             <option value="AUTO">AUTO</option>
           </select>
         </div>
-
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'space-between' }}>
           <span style={{ fontSize: '8px', color: '#666', fontWeight: 'bold' }}>GAIN</span>
-          <input 
-            type="range" min="0.1" max="5" step="0.1" value={gain} 
-            onChange={(e) => setGain(parseFloat(e.target.value))}
-            style={{ width: '50px', height: '8px' }}
-          />
+          <input type="range" min="0.1" max="5" step="0.1" value={gain} onChange={(e) => setGain(parseFloat(e.target.value))} style={{ width: '50px', height: '8px' }} />
         </div>
-
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'space-between' }}>
           <span style={{ fontSize: '8px', color: '#666', fontWeight: 'bold' }}>ZOOM</span>
-          <input 
-            type="range" min="1" max="10" step="0.1" value={zoom} 
-            onChange={(e) => setZoom(parseFloat(e.target.value))}
-            style={{ width: '50px', height: '8px' }}
-          />
+          <input type="range" min="1" max="10" step="0.1" value={zoom} onChange={(e) => setZoom(parseFloat(e.target.value))} style={{ width: '50px', height: '8px' }} />
         </div>
-
         {triggerMode === 'AUTO' && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '8px', color: '#666', fontWeight: 'bold' }}>THR</span>
-            <input 
-              type="range" min="-1" max="1" step="0.1" value={threshold} 
-              onChange={(e) => setThreshold(parseFloat(e.target.value))}
-              style={{ width: '50px', height: '8px' }}
-            />
+            <input type="range" min="-1" max="1" step="0.1" value={threshold} onChange={(e) => setThreshold(parseFloat(e.target.value))} style={{ width: '50px', height: '8px' }} />
           </div>
         )}
       </div>
