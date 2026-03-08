@@ -17,21 +17,21 @@ class VultProcessor extends AudioWorkletProcessor {
       const { type, data } = event.data;
       if (type === 'updateCode') {
         try {
-          const factory = new Function(`
-            var exports = {};
-            ${data.jsCode}
-            if (typeof vultProcess !== 'undefined') return vultProcess;
-            if (typeof exports !== 'undefined' && exports.vultProcess) return exports.vultProcess;
-            return null;
-          `);
+          this.vultInstance = null;
+          const body = "var exports = {};\n" + data.jsCode + "\n" +
+                       "if (typeof vultProcess !== 'undefined') return vultProcess;\n" +
+                       "if (typeof exports !== 'undefined' && exports.vultProcess) return exports.vultProcess;\n" +
+                       "return null;";
+          const factory = new Function(body);
           const VultConstructor = factory();
           if (!VultConstructor) throw new Error("vultProcess class not found");
           
-          this.vultInstance = new VultConstructor();
-          const initFn = this.vultInstance.liveDefault || this.vultInstance.default;
-          if (typeof initFn === 'function') initFn.call(this.vultInstance);
+          const instance = new VultConstructor();
+          instance._processFn = instance.liveProcess || instance.process;
+          const initFn = instance.liveDefault || instance.default;
+          if (typeof initFn === 'function') initFn.call(instance);
           
-          console.log("[Worklet] Vult instance loaded.");
+          this.vultInstance = instance;
           this.port.postMessage({ type: 'status', success: true });
         } catch (err) {
           console.error("[Worklet] Update Error:", err);
@@ -56,58 +56,48 @@ class VultProcessor extends AudioWorkletProcessor {
                          type === 'noteOff' ? (this.vultInstance.liveNoteOff || this.vultInstance.noteOff) :
                          (this.vultInstance.liveControlChange || this.vultInstance.controlChange);
           if (typeof method === 'function') {
-            if (type === 'noteOff') method.call(this.vultInstance, data.note, data.channel);
-            else if (type === 'noteOn') method.call(this.vultInstance, data.note, data.velocity, data.channel);
-            else method.call(this.vultInstance, data.control, data.value, data.channel);
+            try {
+              if (type === 'noteOff') method.call(this.vultInstance, data.note, data.channel);
+              else if (type === 'noteOn') method.call(this.vultInstance, data.note, data.velocity, data.channel);
+              else method.call(this.vultInstance, data.control, data.value, data.channel);
+            } catch(e) {}
           }
         }
       }
     };
   }
 
-  // Robust state collector
+  // Deep recursive state collection
   collectState() {
-    if (!this.vultInstance) return { "_status": "No instance" };
+    if (!this.vultInstance) return { "_status": "waiting" };
     const state = {};
-    
-    // We scan the instance and its common context holders
-    const targets = [
-      { obj: this.vultInstance.context, prefix: "" },
-      { obj: this.vultInstance._ctx, prefix: "" },
-      { obj: this.vultInstance, prefix: "" }
-    ];
+    const seen = new Set();
 
-    targets.forEach(({ obj, prefix }) => {
-      if (!obj || typeof obj !== 'object') return;
-      
-      // Use both getOwnPropertyNames and a standard for...in to be sure
-      const keys = new Set([
-        ...Object.getOwnPropertyNames(obj),
-        ...Object.keys(obj)
-      ]);
+    const scan = (obj, prefix = "", depth = 0) => {
+      if (depth > 6 || !obj || typeof obj !== 'object' || seen.has(obj)) return;
+      seen.add(obj);
 
-      keys.forEach(key => {
-        // Skip noise and recursion
-        if (key === 'context' || key === '_ctx' || key === 'process' || key.startsWith('live')) return;
+      // Get all properties
+      const keys = Object.getOwnPropertyNames(obj);
+      for (const key of keys) {
+        // Skip internal noise
+        if (key === 'context' || key === '_ctx' || key === '_processFn' || key.startsWith('live') || key.startsWith('Live_')) continue;
         
         const val = obj[key];
         const fullKey = prefix ? prefix + "." + key : key;
 
-        if (typeof val === 'number') {
+        if (typeof val === 'number' || typeof val === 'boolean') {
           state[fullKey] = val;
-        } else if (typeof val === 'boolean') {
-          state[fullKey] = val;
-        } else if (val && typeof val === 'object' && !Array.isArray(val) && prefix === "") {
-          // One level of nesting for objects like 'adsr' or 'filter' state
-          for (const subKey in val) {
-            const subVal = val[subKey];
-            if (typeof subVal === 'number' || typeof subVal === 'boolean') {
-              state[key + "." + subKey] = subVal;
-            }
-          }
+        } else if (typeof val === 'object' && val !== null) {
+          scan(val, fullKey, depth + 1);
         }
-      });
-    });
+      }
+    };
+
+    // Scan main entry points for state
+    if (this.vultInstance.context) scan(this.vultInstance.context);
+    if (this.vultInstance._ctx) scan(this.vultInstance._ctx);
+    scan(this.vultInstance);
 
     return state;
   }
@@ -151,39 +141,29 @@ class VultProcessor extends AudioWorkletProcessor {
         }
       }
 
-      if (this.vultInstance) {
-        const processFn = this.vultInstance.liveProcess || this.vultInstance.process;
-        if (typeof processFn === 'function') {
-          try {
-            const result = processFn.apply(this.vultInstance, inputValues);
-            
-            // PROBE SYNC
-            this.activeProbes.forEach(p => {
-              const ctx = this.vultInstance.context || this.vultInstance._ctx || this.vultInstance;
-              let val = 0;
-              if (p.includes('.')) {
-                const parts = p.split('.');
-                let current = ctx;
-                for(const part of parts) { if(current) current = current[part]; }
-                val = typeof current === 'number' ? current : 0;
-              } else {
-                val = ctx[p] !== undefined ? ctx[p] : this.vultInstance[p];
-              }
-              if (this.probeBuffers[p]) this.probeBuffers[p][this.bufferIdx] = typeof val === 'number' ? val : 0;
-            });
-            this.bufferIdx = (this.bufferIdx + 1) % this.bufferSize;
-
-            if (typeof result === 'object' && result !== null) {
-              outputL[i] = result.t0 || 0;
-              if (outputR) outputR[i] = result.t1 !== undefined ? result.t1 : outputL[i];
-            } else {
-              outputL[i] = typeof result === 'number' ? result : 0;
-              if (outputR) outputR[i] = outputL[i];
+      if (this.vultInstance && this.vultInstance._processFn) {
+        try {
+          const result = this.vultInstance._processFn.apply(this.vultInstance, inputValues);
+          
+          this.activeProbes.forEach(p => {
+            const parts = p.split('.');
+            let current = this.vultInstance.context || this.vultInstance._ctx || this.vultInstance;
+            for(const part of parts) { 
+              if(current && current[part] !== undefined) current = current[part];
+              else break;
             }
-          } catch (e) {
-            outputL[i] = outputR[i] = 0;
+            if (this.probeBuffers[p]) this.probeBuffers[p][this.bufferIdx] = typeof current === 'number' ? current : 0;
+          });
+          this.bufferIdx = (this.bufferIdx + 1) % this.bufferSize;
+
+          if (typeof result === 'object' && result !== null) {
+            outputL[i] = result.t0 || 0;
+            if (outputR) outputR[i] = result.t1 !== undefined ? result.t1 : outputL[i];
+          } else {
+            outputL[i] = typeof result === 'number' ? result : 0;
+            if (outputR) outputR[i] = outputL[i];
           }
-        } else {
+        } catch (e) {
           outputL[i] = outputR[i] = 0;
         }
       } else {
@@ -191,7 +171,7 @@ class VultProcessor extends AudioWorkletProcessor {
       }
     }
 
-    if (this.telemetryCounter++ > 30) {
+    if (this.vultInstance && this.telemetryCounter++ > 23) {
       this.telemetryCounter = 0;
       const state = this.collectState();
       this.port.postMessage({ type: 'telemetry', state, probes: this.probeBuffers });
