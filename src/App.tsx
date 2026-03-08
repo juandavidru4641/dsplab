@@ -442,7 +442,7 @@ const App: React.FC = () => {
 
         <div className="editor-layout">
           <div className="editor-container">
-            <div style={{ flex: 1, minHeight: '300px' }}>
+            <div className="editor-wrapper" style={{ flex: 1, minHeight: 0 }}>
               <VultEditor 
                 code={code} 
                 onChange={handleCodeChange} 

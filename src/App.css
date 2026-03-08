@@ -84,21 +84,27 @@
 
 .status-badge { display: flex; align-items: center; gap: 6px; background: #252526; padding: 4px 10px; border-radius: 15px; font-size: 10px; color: #aaa; border: 1px solid #333; }
 
-.editor-layout { flex: 1; display: flex; }
-.editor-container { flex: 1; display: flex; flex-direction: column; border-right: 1px solid #333; overflow: hidden; }
+.editor-layout { flex: 1; display: flex; height: calc(100vh - 80px); overflow: hidden; }
+.editor-container { 
+  flex: 1; 
+  display: flex; 
+  flex-direction: column; 
+  border-right: 1px solid #333; 
+  overflow: hidden; 
+}
 
-.side-panel { width: 320px; display: flex; flex-direction: column; }
-.scope-section { height: 200px; padding: 10px; border-bottom: 1px solid #333; background: #000; }
-.llm-section { flex: 1; }
+.side-panel { width: 320px; display: flex; flex-direction: column; height: 100%; }
+.scope-section { flex: 0 0 200px; padding: 10px; border-bottom: 1px solid #333; background: #000; }
+.llm-section { flex: 1; overflow: hidden; }
 
 /* DSP LAB */
 .dsp-lab {
-  height: 110px;
+  flex: 0 0 100px;
   background: #1a1a1a;
   border-top: 1px solid #333;
   display: flex;
   flex-direction: column;
-  padding: 6px;
+  padding: 6px 10px;
 }
 
 .section-title {
@@ -161,7 +167,171 @@
   gap: 3px;
 }
 
-.spacer { flex: 1; }
+/* VIRTUAL MIDI PANEL */
+.virtual-midi-panel {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  background: #1a1a1a;
+  border-top: 1px solid #333;
+  padding: 8px 10px;
+  gap: 8px;
+  user-select: none;
+}
 
-@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-.animate-spin { animation: spin 1s linear infinite; }
+.midi-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.midi-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mini-label {
+  font-size: 9px;
+  color: #666;
+  font-weight: bold;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #333;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #ffcc00;
+  cursor: pointer;
+}
+
+.stepper-value {
+  font-size: 10px;
+  font-weight: bold;
+  width: 25px;
+  text-align: center;
+}
+
+.kb-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: #333;
+  color: #aaa;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: bold;
+  transition: all 0.2s;
+}
+
+.kb-toggle.active {
+  background: #ffcc00;
+  color: #000;
+}
+
+/* KNOBS */
+.knobs-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  justify-content: center;
+  padding-bottom: 4px;
+}
+
+.knob-unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 32px;
+}
+
+.knob-label {
+  font-size: 8px;
+  color: #888;
+}
+
+.knob-value {
+  font-size: 9px;
+  color: #ffcc00;
+}
+
+.knob-unit input[type="range"] {
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+}
+
+/* KEYBOARD */
+.keyboard-container {
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+  width: 100%;
+}
+
+.keyboard-inner {
+  position: relative;
+  display: flex;
+  width: fit-content;
+}
+
+.key {
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding-bottom: 8px;
+  transition: background 0.1s;
+  flex-shrink: 0;
+}
+
+.key.white {
+  width: 30px;
+  height: 100px;
+  background: #f0f0f0;
+  border: 1px solid #999;
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  z-index: 1;
+  color: #bbb;
+}
+
+.key.white.active {
+  background: #ffcc00;
+  color: #000;
+}
+
+.key.black {
+  width: 20px;
+  height: 65px;
+  background: #222;
+  position: absolute;
+  z-index: 2;
+  border-radius: 0 0 3px 3px;
+  border: 1px solid #000;
+  border-top: none;
+  color: #666;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.key.black.active {
+  background: #ff4444;
+  color: #fff;
+}
+
+.key-label {
+  font-size: 8px;
+  font-weight: bold;
+}
+
+.note-name {
+  font-size: 7px;
+}
