@@ -305,29 +305,29 @@ export class AudioEngine {
     if (!this.analyser || !this.audioContext) return null;
     this.analyser.getByteFrequencyData(this.spectrumBuffer as any);
     
-    const bins = Array.from(this.spectrumBuffer);
+    const bins = this.spectrumBuffer;
     const minDb = this.analyser.minDecibels;
     const maxDb = this.analyser.maxDecibels;
     const range = maxDb - minDb;
 
-    // Convert byte values to linear power
-    const powers = bins.map(v => Math.pow(10, (minDb + (v / 255) * range) / 10));
-    
     let totalPower = 0;
     let maxPower = 0;
     let maxBin = -1;
 
-    for (let i = 0; i < powers.length; i++) {
-      totalPower += powers[i];
-      if (powers[i] > maxPower) {
-        maxPower = powers[i];
+    // Single-pass power calculation
+    for (let i = 0; i < bins.length; i++) {
+      const db = minDb + (bins[i] / 255) * range;
+      const power = Math.pow(10, db / 10);
+      totalPower += power;
+      if (power > maxPower) {
+        maxPower = power;
         maxBin = i;
       }
     }
 
     if (totalPower === 0 || maxPower < 1e-9) return { error: "Signal too weak for analysis." };
 
-    const noiseAndDistPower = totalPower - maxPower;
+    const noiseAndDistPower = Math.max(0, totalPower - maxPower);
     const thdn = (noiseAndDistPower / totalPower) * 100;
     const snr = 10 * Math.log10(maxPower / (noiseAndDistPower + 1e-12));
     const peakDb = minDb + (bins[maxBin] / 255) * range;

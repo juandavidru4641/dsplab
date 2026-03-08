@@ -172,13 +172,16 @@ const LLMPane: React.FC<LLMPaneProps> = ({
   };
 
   const addDisplayMsg = (role: 'user' | 'assistant' | 'system' | 'thought', content: string, id: string = Math.random().toString(36), isStreaming = false, choices?: {label: string, value: string}[]) => {
+    const timestamp = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const formattedContent = role === 'system' ? `[${timestamp}] ${content}` : content;
+    
     setDisplayMessages(prev => {
       if (isStreaming && prev.length > 0 && prev[prev.length - 1].id === id) {
         const next = [...prev];
         next[next.length - 1] = { ...next[next.length - 1], content: prev[prev.length - 1].content + content };
         return next;
       }
-      return [...prev, { role, content, id, isStreaming, choices }];
+      return [...prev, { role, content: formattedContent, id, isStreaming, choices }];
     });
     // Auto-expand if it's a thought and streaming
     if (role === 'thought' && isStreaming) {
