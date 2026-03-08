@@ -93,7 +93,7 @@
   overflow: hidden; 
 }
 
-.side-panel { width: 320px; display: flex; flex-direction: column; height: 100%; }
+.side-panel { width: 320px; flex-shrink: 0; display: flex; flex-direction: column; height: 100%; }
 .scope-section { flex: 0 0 200px; padding: 10px; border-bottom: 1px solid #333; background: #000; }
 .llm-section { flex: 1; overflow: hidden; }
 
@@ -294,12 +294,12 @@
 }
 
 .key.white {
-  width: 30px;
-  height: 100px;
+  width: 22px;
+  height: 80px;
   background: #f0f0f0;
   border: 1px solid #999;
   border-top: none;
-  border-radius: 0 0 4px 4px;
+  border-radius: 0 0 3px 3px;
   z-index: 1;
   color: #bbb;
 }
@@ -310,12 +310,12 @@
 }
 
 .key.black {
-  width: 20px;
-  height: 65px;
+  width: 14px;
+  height: 50px;
   background: #222;
   position: absolute;
   z-index: 2;
-  border-radius: 0 0 3px 3px;
+  border-radius: 0 0 2px 2px;
   border: 1px solid #000;
   border-top: none;
   color: #666;

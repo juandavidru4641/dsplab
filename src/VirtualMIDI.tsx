@@ -13,9 +13,14 @@ const KEY_LABELS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 
 const KEY_TYPES = ['white', 'black', 'white', 'black', 'white', 'white', 'black', 'white', 'black', 'white', 'black', 'white'];
 const KEYBOARD_MAPPING = ['a', 'w', 's', 'e', 'd', 'f', 't', 'g', 'y', 'h', 'u', 'j', 'k', 'o', 'l', 'p', ';', "'"];
 
+const WHITE_KEY_WIDTH = 22; // Reduced size
+const BLACK_KEY_WIDTH = 14; // Reduced size
+
 const VirtualMIDI: React.FC<VirtualMIDIProps> = ({ onCC, onNoteOn, onNoteOff }) => {
   const [activeNotes, setActiveNotes] = useState<Set<number>>(new Set());
+  const [mouseActiveNotes, setMouseActiveNotes] = useState<Set<number>>(new Set());
   const [kbEnabled, setKbEnabled] = useState(false);
+  const [isMouseDown, setIsMouseDown] = useState(false);
   const [octave, setOctave] = useState(3);
   const [velocity, setVelocity] = useState(100);
   const [ccValues, setCcValues] = useState<Record<number, number>>(
@@ -23,7 +28,7 @@ const VirtualMIDI: React.FC<VirtualMIDIProps> = ({ onCC, onNoteOn, onNoteOff }) 
   );
   
   const containerRef = useRef<HTMLDivElement>(null);
-  const [numKeys, setNumKeys] = useState(25); // Default
+  const [numKeys, setNumKeys] = useState(25);
 
   const baseNote = octave * 12 + 12;
 
@@ -33,16 +38,8 @@ const VirtualMIDI: React.FC<VirtualMIDIProps> = ({ onCC, onNoteOn, onNoteOff }) 
     const updateSize = () => {
       if (containerRef.current) {
         const width = containerRef.current.offsetWidth;
-        // White keys are 30px wide. We calculate how many fit.
-        // We want to fill the width but stay musically consistent (multiples of 12 preferred, or just as many as fit)
-        const whiteKeyWidth = 30;
-        const maxWhiteKeys = Math.floor(width / whiteKeyWidth);
-        
-        // Convert white keys back to total keys (including black)
-        // Roughly 7 white keys per 12 keys
+        const maxWhiteKeys = Math.floor(width / WHITE_KEY_WIDTH);
         let estimatedTotalKeys = Math.floor((maxWhiteKeys / 7) * 12);
-        
-        // Clamp to reasonable range
         setNumKeys(Math.max(12, Math.min(estimatedTotalKeys, 127 - baseNote)));
       }
     };
@@ -63,30 +60,64 @@ const VirtualMIDI: React.FC<VirtualMIDIProps> = ({ onCC, onNoteOn, onNoteOff }) 
     };
   });
 
-  const handleNoteOn = useCallback((note: number) => {
-    setActiveNotes(prev => {
-      if (prev.has(note)) return prev;
-      const next = new Set(prev);
-      next.add(note);
-      onNoteOn(note, velocity);
-      return next;
-    });
+  const handleNoteOn = useCallback((note: number, isMouse = false) => {
+    if (isMouse) {
+      setMouseActiveNotes(prev => {
+        if (prev.has(note)) return prev;
+        const next = new Set(prev);
+        next.add(note);
+        onNoteOn(note, velocity);
+        return next;
+      });
+    } else {
+      setActiveNotes(prev => {
+        if (prev.has(note)) return prev;
+        const next = new Set(prev);
+        next.add(note);
+        onNoteOn(note, velocity);
+        return next;
+      });
+    }
   }, [onNoteOn, velocity]);
 
-  const handleNoteOff = useCallback((note: number) => {
-    setActiveNotes(prev => {
-      if (!prev.has(note)) return prev;
-      const next = new Set(prev);
-      next.delete(note);
-      onNoteOff(note);
-      return next;
-    });
+  const handleNoteOff = useCallback((note: number, isMouse = false) => {
+    if (isMouse) {
+      setMouseActiveNotes(prev => {
+        if (!prev.has(note)) return prev;
+        const next = new Set(prev);
+        next.delete(note);
+        onNoteOff(note);
+        return next;
+      });
+    } else {
+      setActiveNotes(prev => {
+        if (!prev.has(note)) return prev;
+        const next = new Set(prev);
+        next.delete(note);
+        onNoteOff(note);
+        return next;
+      });
+    }
   }, [onNoteOff]);
+
+  const handleAllMouseNotesOff = useCallback(() => {
+    mouseActiveNotes.forEach(note => onNoteOff(note));
+    setMouseActiveNotes(new Set());
+  }, [mouseActiveNotes, onNoteOff]);
 
   const handleCCChange = (cc: number, val: number) => {
     setCcValues(prev => ({ ...prev, [cc]: val }));
     onCC(cc, val);
   };
+
+  useEffect(() => {
+    const onGlobalMouseUp = () => {
+      setIsMouseDown(false);
+      handleAllMouseNotesOff();
+    };
+    window.addEventListener('mouseup', onGlobalMouseUp);
+    return () => window.removeEventListener('mouseup', onGlobalMouseUp);
+  }, [handleAllMouseNotesOff]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -113,6 +144,18 @@ const VirtualMIDI: React.FC<VirtualMIDIProps> = ({ onCC, onNoteOn, onNoteOff }) 
       window.removeEventListener('keyup', onKeyUp);
     };
   }, [kbEnabled, baseNote, handleNoteOn, handleNoteOff, numKeys]);
+
+  const onKeyMouseDown = (note: number) => {
+    setIsMouseDown(true);
+    handleNoteOn(note, true);
+  };
+
+  const onKeyMouseEnter = (note: number) => {
+    if (isMouseDown) {
+      handleAllMouseNotesOff();
+      handleNoteOn(note, true);
+    }
+  };
 
   return (
     <div className="virtual-midi-panel">
@@ -154,16 +197,17 @@ const VirtualMIDI: React.FC<VirtualMIDIProps> = ({ onCC, onNoteOn, onNoteOff }) 
         <div className="keyboard-inner">
           {generatedKeys.map((k, i) => {
             const note = baseNote + k.offset;
-            const isActive = activeNotes.has(note);
+            const isActive = activeNotes.has(note) || mouseActiveNotes.has(note);
             const whiteKeysCount = generatedKeys.filter((x, idx) => x.type === 'white' && idx < i).length;
             
             if (k.type === 'white') {
               return (
                 <div key={k.offset} className={`key white ${isActive ? 'active' : ''}`}
-                  onMouseDown={() => handleNoteOn(note)} onMouseUp={() => handleNoteOff(note)}
-                  onMouseLeave={() => isActive && handleNoteOff(note)}
-                  onTouchStart={(e) => { e.preventDefault(); handleNoteOn(note); }}
-                  onTouchEnd={(e) => { e.preventDefault(); handleNoteOff(note); }}>
+                  onMouseDown={() => onKeyMouseDown(note)}
+                  onMouseEnter={() => onKeyMouseEnter(note)}
+                  onMouseLeave={() => isMouseDown && handleNoteOff(note, true)}
+                  onTouchStart={(e) => { e.preventDefault(); handleNoteOn(note, true); }}
+                  onTouchEnd={(e) => { e.preventDefault(); handleNoteOff(note, true); }}>
                   <div className="key-label">{k.kbChar.toUpperCase()}</div>
                   <div className="note-name">{k.label}</div>
                 </div>
@@ -171,11 +215,12 @@ const VirtualMIDI: React.FC<VirtualMIDIProps> = ({ onCC, onNoteOn, onNoteOff }) 
             } else {
               return (
                 <div key={k.offset} className={`key black ${isActive ? 'active' : ''}`}
-                  style={{ left: `${whiteKeysCount * 30 - 10}px` }}
-                  onMouseDown={() => handleNoteOn(note)} onMouseUp={() => handleNoteOff(note)}
-                  onMouseLeave={() => isActive && handleNoteOff(note)}
-                  onTouchStart={(e) => { e.preventDefault(); handleNoteOn(note); }}
-                  onTouchEnd={(e) => { e.preventDefault(); handleNoteOff(note); }}>
+                  style={{ left: `${whiteKeysCount * WHITE_KEY_WIDTH - (BLACK_KEY_WIDTH / 2)}px` }}
+                  onMouseDown={() => onKeyMouseDown(note)}
+                  onMouseEnter={() => onKeyMouseEnter(note)}
+                  onMouseLeave={() => isMouseDown && handleNoteOff(note, true)}
+                  onTouchStart={(e) => { e.preventDefault(); handleNoteOn(note, true); }}
+                  onTouchEnd={(e) => { e.preventDefault(); handleNoteOff(note, true); }}>
                   <div className="key-label">{k.kbChar.toUpperCase()}</div>
                 </div>
               );
