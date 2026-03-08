@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface MultiScopeViewProps {
   probes: string[];
@@ -7,6 +7,8 @@ interface MultiScopeViewProps {
 
 const MultiScopeView: React.FC<MultiScopeViewProps> = ({ probes, getProbedData }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const historyRef = useRef<Record<string, number[]>>({});
+  const [timebase, setTimebase] = useState(500); // Number of points to show
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -43,48 +45,57 @@ const MultiScopeView: React.FC<MultiScopeViewProps> = ({ probes, getProbedData }
         ctx.font = '10px monospace';
         ctx.textAlign = 'center';
         ctx.fillText('NO PROBES ACTIVE', width / 2, height / 2);
+        animationFrame = requestAnimationFrame(render);
+        return;
       }
 
-      // Draw each probe in its own lane or overlaid
-      const laneHeight = height / Math.max(1, probes.length);
+      // Update History from latest probe data
+      probes.forEach(probe => {
+        const data = getProbedData(probe);
+        if (data) {
+          if (!historyRef.current[probe]) historyRef.current[probe] = [];
+          // Capture the latest value from the audio block for plotting
+          const latestVal = data[data.length - 1];
+          historyRef.current[probe].push(latestVal);
+          // Keep history limited to 2x timebase for smooth scrolling
+          if (historyRef.current[probe].length > timebase) {
+            historyRef.current[probe].shift();
+          }
+        }
+      });
+
+      const laneHeight = height / probes.length;
 
       probes.forEach((probe, idx) => {
-        const data = getProbedData(probe);
-        if (!data) return;
+        const history = historyRef.current[probe];
+        if (!history || history.length < 2) return;
 
         const color = colors[idx % colors.length];
         ctx.strokeStyle = color;
         ctx.lineWidth = 1.5;
         ctx.beginPath();
 
-        const sliceWidth = width / data.length;
-        let x = 0;
+        const sliceWidth = width / (timebase - 1);
+        
+        // Auto-scale logic
+        let min = Math.min(...history);
+        let max = Math.max(...history);
+        let range = Math.max(0.0001, max - min);
 
-        // Find min/max for auto-scaling
-        let min = 0;
-        let max = 0;
-        for(let i=0; i<data.length; i++) {
-          if (data[i] < min) min = data[i];
-          if (data[i] > max) max = data[i];
-        }
-        const range = Math.max(0.0001, max - min);
-
-        for (let i = 0; i < data.length; i++) {
-          // Lane-based drawing
-          const norm = (data[i] - min) / range;
+        history.forEach((val, i) => {
+          const norm = (val - min) / range;
+          const x = i * sliceWidth;
           const y = (idx * laneHeight) + (laneHeight - norm * laneHeight * 0.8) - (laneHeight * 0.1);
           
           if (i === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
-          x += sliceWidth;
-        }
+        });
         ctx.stroke();
 
-        // Label
+        // Label and Value
         ctx.fillStyle = color;
         ctx.font = '9px monospace';
-        ctx.textAlign = 'left';
-        ctx.fillText(probe, 5, (idx * laneHeight) + 12);
+        ctx.fillText(`${probe}: ${history[history.length-1].toFixed(4)}`, 5, (idx * laneHeight) + 12);
       });
 
       animationFrame = requestAnimationFrame(render);
@@ -92,11 +103,21 @@ const MultiScopeView: React.FC<MultiScopeViewProps> = ({ probes, getProbedData }
 
     render();
     return () => cancelAnimationFrame(animationFrame);
-  }, [probes, getProbedData]);
+  }, [probes, getProbedData, timebase]);
 
   return (
-    <div style={{ height: '250px', width: '100%', border: '1px solid #333', background: '#000', borderRadius: '8px', overflow: 'hidden', marginTop: '10px' }}>
-      <canvas ref={canvasRef} width={800} height={250} style={{ width: '100%', height: '100%', display: 'block' }} />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+        <span style={{ fontSize: '8px', color: '#666' }}>TIMEBASE</span>
+        <input 
+          type="range" min="100" max="2000" value={timebase} 
+          onChange={(e) => setTimebase(parseInt(e.target.value))}
+          style={{ width: '80px', height: '10px' }}
+        />
+      </div>
+      <div style={{ height: '250px', width: '100%', border: '1px solid #333', background: '#000', borderRadius: '8px', overflow: 'hidden' }}>
+        <canvas ref={canvasRef} width={800} height={250} style={{ width: '100%', height: '100%', display: 'block' }} />
+      </div>
     </div>
   );
 };

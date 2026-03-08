@@ -286,10 +286,37 @@ const App: React.FC = () => {
       if (result.success) {
         setStatus('Running');
         ae.setProbes(activeProbes);
+        setEditorMarkers([]);
       }
-      else setStatus('Compile Error');
+      else {
+        setStatus('Compile Error');
+        console.error("Vult Compile Error:", result.error);
+        const marker = parseVultError(result.error);
+        if (marker) {
+          setEditorMarkers([marker]);
+        }
+      }
       setIsPlaying(true);
     }
+  };
+
+  const parseVultError = (errorStr: string) => {
+    const lineMatch = errorStr.match(/line (\d+)/i);
+    const colMatch = errorStr.match(/column (\d+)/i) || errorStr.match(/characters (\d+)/i);
+    
+    if (lineMatch) {
+      const line = parseInt(lineMatch[1]);
+      const col = colMatch ? parseInt(colMatch[1]) : 1;
+      return {
+        startLineNumber: line,
+        endLineNumber: line,
+        startColumn: col,
+        endColumn: col + 1,
+        message: errorStr.replace(/Errors in the program:\s*/, '').trim(),
+        severity: 8
+      };
+    }
+    return null;
   };
 
   const handleCodeChange = async (value: string | undefined) => {
@@ -314,17 +341,11 @@ const App: React.FC = () => {
       const result = await audioEngineRef.current.updateCode(value);
       if (!result.success) {
         setStatus(`Compile Error`);
-        const lineMatch = result.error.match(/line (\d+)/);
-        if (lineMatch) {
-          const line = parseInt(lineMatch[1]);
-          setEditorMarkers([{
-            startLineNumber: line,
-            endLineNumber: line,
-            startColumn: 1,
-            endColumn: 100,
-            message: result.error,
-            severity: 8
-          }]);
+        const marker = parseVultError(result.error);
+        if (marker) {
+          setEditorMarkers([marker]);
+        } else {
+          setEditorMarkers([]);
         }
       } else {
         setStatus('Running');
@@ -343,10 +364,19 @@ const App: React.FC = () => {
 
   const toggleProbe = (name: string) => {
     setActiveProbes(prev => {
-      const next = prev.includes(name) ? prev.filter(p => p !== name) : [...prev, name].slice(-6); // Limit to 6 traces
+      const next = prev.includes(name) ? prev.filter(p => p !== name) : [...prev, name].slice(-6);
       audioEngineRef.current.setProbes(next);
       return next;
     });
+  };
+
+  const handleSampleUpload = async (idx: number, file: File) => {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const arrayBuffer = await file.arrayBuffer();
+    const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+    const floatData = audioBuffer.getChannelData(0); // Mono for now
+    audioEngineRef.current.setSampleData(idx, floatData);
+    updateInput(idx, { name: file.name.split('.')[0] });
   };
 
   useEffect(() => {
@@ -490,6 +520,7 @@ const App: React.FC = () => {
                     </div>
                     <select value={input.type} onChange={(e) => updateInput(i, { type: e.target.value as SourceType })}>
                       <option value="oscillator">Oscillator</option>
+                      <option value="sample">Sample File</option>
                       <option value="live">Live Audio</option>
                       <option value="cv">CV Slider</option>
                       <option value="impulse">Impulse</option>
@@ -508,6 +539,14 @@ const App: React.FC = () => {
                           <option value="triangle">Tri</option>
                         </select>
                         <input type="number" value={input.freq} onChange={(e) => updateInput(i, { freq: parseFloat(e.target.value) })} style={{ width: '45px' }} />
+                      </div>
+                    )}
+
+                    {input.type === 'sample' && (
+                      <div className="strip-controls">
+                        <input type="file" accept="audio/*" onChange={(e) => e.target.files && handleSampleUpload(i, e.target.files[0])} style={{ display: 'none' }} id={`sample-${i}`} />
+                        <label htmlFor={`sample-${i}`} style={{ cursor: 'pointer', fontSize: '8px', color: '#ffcc00', border: '1px solid #444', padding: '2px 4px' }}>LOAD</label>
+                        <Play size={10} style={{ cursor: 'pointer', color: '#00ff00' }} onClick={() => audioEngineRef.current.triggerGenerator(i)} />
                       </div>
                     )}
                     
@@ -563,6 +602,7 @@ const App: React.FC = () => {
                     <StateInspector 
                       onStateUpdate={(cb) => audioEngineRef.current.onStateUpdate(cb)} 
                       onProbe={toggleProbe}
+                      onSetState={(path, val) => audioEngineRef.current.setState(path, val)}
                       activeProbes={activeProbes}
                     />
                   </div>

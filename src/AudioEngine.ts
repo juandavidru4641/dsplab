@@ -7,7 +7,7 @@ export interface VultInstance {
   controlChange?: Function;
 }
 
-export type SourceType = 'oscillator' | 'live' | 'cv' | 'silence' | 'test_noise' | 'impulse' | 'step' | 'sweep';
+export type SourceType = 'oscillator' | 'live' | 'cv' | 'silence' | 'test_noise' | 'impulse' | 'step' | 'sweep' | 'sample';
 
 export interface InputSource {
   name: string;
@@ -63,6 +63,18 @@ export class AudioEngine {
   public setProbes(probes: string[]) {
     if (this.workletNode) {
       this.workletNode.port.postMessage({ type: 'setProbes', data: { probes } });
+    }
+  }
+
+  public setState(path: string, value: number) {
+    if (this.workletNode) {
+      this.workletNode.port.postMessage({ type: 'setState', data: { path, value } });
+    }
+  }
+
+  public setSampleData(index: number, buffer: Float32Array) {
+    if (this.workletNode) {
+      this.workletNode.port.postMessage({ type: 'setSampleData', data: { index, buffer } });
     }
   }
 
@@ -142,7 +154,9 @@ export class AudioEngine {
 
       const compilation = await response.json();
       if (compilation.errors && Array.isArray(compilation.errors) && compilation.errors.length > 0) {
-        return { success: false, error: compilation.errors[0].msg || "Compilation Error" };
+        const msg = compilation.errors[0].msg || "Compilation Error";
+        console.error("Vult Compile Error:", msg);
+        return { success: false, error: msg };
       }
 
       const jsCode = compilation.code;

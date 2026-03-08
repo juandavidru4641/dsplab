@@ -41,6 +41,7 @@ class VultProcessor extends AudioWorkletProcessor {
     this.activeProbes = [];
     this.probeBuffers = {};
     this.genStates = [];
+    this.sampleBuffers = {}; // Map of source index -> Float32Array
     
     this.discoveredKeys = [];
 
@@ -49,24 +50,25 @@ class VultProcessor extends AudioWorkletProcessor {
       if (type === 'updateCode') {
         try {
           this.vultInstance = null;
-          const body = vultRuntime + "\n" +
-                       "var exports = {};\n" + data.jsCode + "\n" +
+          // Clean construction of the function body
+          const body = vultRuntime + "\n" + 
+                       "var exports = {};\n" + 
+                       data.jsCode + "\n" +
                        "if (typeof vultProcess !== 'undefined') return vultProcess;\n" +
                        "if (typeof exports !== 'undefined' && exports.vultProcess) return exports.vultProcess;\n" +
                        "return null;";
+          
           const factory = new Function(body);
           const VultConstructor = factory();
           if (!VultConstructor) throw new Error("vultProcess class not found");
           
           const instance = new VultConstructor();
           instance._processFn = instance.liveProcess || instance.process;
-          
           const initFn = instance.liveDefault || instance.default;
           if (typeof initFn === 'function') initFn.call(instance);
           
           this.vultInstance = instance;
           this.discoverVariables();
-          
           this.port.postMessage({ type: 'status', success: true });
         } catch (err) {
           console.error("[Worklet] Update Error:", err);
@@ -78,13 +80,30 @@ class VultProcessor extends AudioWorkletProcessor {
           this.phases = new Array(this.sources.length).fill(0);
           this.genStates = new Array(this.sources.length).fill(0);
         }
+      } else if (type === 'setSampleData') {
+        this.sampleBuffers[data.index] = data.buffer;
+        this.phases[data.index] = 0;
+      } else if (type === 'setState') {
+        if (this.vultInstance) {
+          const parts = data.path.split('.');
+          let target = this.vultInstance.context || this.vultInstance._ctx || this.vultInstance;
+          for (let i = 0; i < parts.length - 1; i++) {
+            if (target) target = target[parts[i]];
+          }
+          if (target && target[parts[parts.length - 1]] !== undefined) {
+            target[parts[parts.length - 1]] = data.value;
+          }
+        }
       } else if (type === 'setProbes') {
         this.activeProbes = data.probes || [];
         this.activeProbes.forEach(p => {
           if (!this.probeBuffers[p]) this.probeBuffers[p] = new Float32Array(this.bufferSize);
         });
       } else if (type === 'trigger') {
-        if (this.genStates[data.index] !== undefined) this.genStates[data.index] = 1.0;
+        if (this.genStates[data.index] !== undefined) {
+          this.genStates[data.index] = 1.0;
+          this.phases[data.index] = 0;
+        }
       } else if (type === 'noteOn' || type === 'noteOff' || type === 'controlChange') {
         if (this.vultInstance) {
           const method = type === 'noteOn' ? (this.vultInstance.liveNoteOn || this.vultInstance.noteOn) :
@@ -102,32 +121,20 @@ class VultProcessor extends AudioWorkletProcessor {
     };
   }
 
-  // Optimized discovery: ignore large arrays and internal noise
   discoverVariables() {
     this.discoveredKeys = [];
     if (!this.vultInstance) return;
     const seen = new Set();
-    
     const scan = (obj, prefix = "", depth = 0) => {
       if (depth > 4 || !obj || typeof obj !== 'object' || seen.has(obj)) return;
-      
-      // SKIP LARGE ARRAYS / TABLES (Crucial for performance)
       if (Array.isArray(obj) && obj.length > 32) return;
       if (Object.keys(obj).length > 64) return; 
-
       seen.add(obj);
       const keys = Object.getOwnPropertyNames(obj);
       for (const key of keys) {
-        // Filter out internal Vult noise and methods
-        if (key === 'context' || key === '_ctx' || key === '_processFn' || 
-            key.startsWith('live') || key.startsWith('Live_') || 
-            key.startsWith('_inst') || // Hidden instances are often noise
-            !isNaN(parseInt(key)) || // Skip numeric indices (arrays)
-            typeof obj[key] === 'function') continue;
-        
+        if (key === 'context' || key === '_ctx' || key === '_processFn' || key.startsWith('live') || key.startsWith('Live_') || key.startsWith('_inst') || !isNaN(parseInt(key)) || typeof obj[key] === 'function') continue;
         const val = obj[key];
         const fullKey = prefix ? prefix + "." + key : key;
-
         if (typeof val === 'number' || typeof val === 'boolean') {
           this.discoveredKeys.push({ path: fullKey, segments: fullKey.split('.') });
         } else if (typeof val === 'object' && val !== null) {
@@ -135,7 +142,6 @@ class VultProcessor extends AudioWorkletProcessor {
         }
       }
     };
-
     if (this.vultInstance.context) scan(this.vultInstance.context);
     if (this.vultInstance._ctx) scan(this.vultInstance._ctx);
     scan(this.vultInstance);
@@ -147,8 +153,7 @@ class VultProcessor extends AudioWorkletProcessor {
     for (const item of this.discoveredKeys) {
       let current = this.vultInstance.context || this.vultInstance._ctx || this.vultInstance;
       for (const segment of item.segments) {
-        if (current) current = current[segment];
-        else break;
+        if (current) current = current[segment]; else break;
       }
       if (typeof current === 'number' || typeof current === 'boolean') {
         state[item.path] = current;
@@ -171,6 +176,7 @@ class VultProcessor extends AudioWorkletProcessor {
       for (let s = 0; s < numInputs; s++) {
         const src = this.sources[s];
         if (!src) { inputValues.push(0); continue; }
+        
         if (src.type === 'oscillator') {
           const phaseInc = (src.freq || 440) / 44100;
           this.phases[s] = (this.phases[s] + (isNaN(phaseInc) ? 0 : phaseInc)) % 1.0;
@@ -180,6 +186,19 @@ class VultProcessor extends AudioWorkletProcessor {
           else if (src.oscType === 'square') inputValues.push(p < 0.5 ? 1 : -1);
           else if (src.oscType === 'triangle') inputValues.push(Math.abs(p * 4 - 2) - 1);
           else inputValues.push(0);
+        } else if (src.type === 'sample') {
+          const buffer = this.sampleBuffers[s];
+          if (buffer) {
+            const pos = Math.floor(this.phases[s]);
+            if (pos < buffer.length) {
+              inputValues.push(buffer[pos]);
+              this.phases[s]++;
+            } else {
+              inputValues.push(0);
+            }
+          } else {
+            inputValues.push(0);
+          }
         } else if (src.type === 'cv') {
           inputValues.push(src.value || 0);
         } else if (src.type === 'live') {
@@ -204,7 +223,7 @@ class VultProcessor extends AudioWorkletProcessor {
             this.activeProbes.forEach(p => {
               const parts = p.split('.');
               let target = this.vultInstance.context || this.vultInstance._ctx || this.vultInstance;
-              for(const part of parts) { if(target) target = target[part]; }
+              for(const part of parts) { if(target && target[part] !== undefined) target = target[part]; else break; }
               if (this.probeBuffers[p]) this.probeBuffers[p][this.bufferIdx] = typeof target === 'number' ? target : 0;
             });
             this.bufferIdx = (this.bufferIdx + 1) % this.bufferSize;
