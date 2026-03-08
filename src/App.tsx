@@ -357,7 +357,7 @@ const App: React.FC = () => {
       const response = await fetch('/api/compile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code })
+        body: JSON.stringify({ code, target: 'cpp' })
       });
       const data = await response.json();
       if (data.code) {

@@ -18,13 +18,31 @@ let inputData = '';
 process.stdin.on('data', chunk => { inputData += chunk; });
 process.stdin.on('end', () => {
     try {
-        const { code } = JSON.parse(inputData);
+        const { code, target } = JSON.parse(inputData);
         if (!code) throw new Error("No code provided");
 
-        // Try standard compilation
+        if (target === 'c' || target === 'cpp') {
+            // Use generateC for C++ export
+            // Vult generateC usually returns a list of files or an object with multiple strings
+            // We'll try to get the main .cpp content
+            const compilation = compiler.generateC(code, ["-template", "none"]);
+            
+            if (compilation.errors && Array.isArray(compilation.errors) && compilation.errors.length > 0) {
+                process.stdout.write(JSON.stringify({ errors: compilation.errors }));
+            } else {
+                // compilation is usually an array of { name: string, code: string }
+                // or similar structure depending on the vult version
+                process.stdout.write(JSON.stringify({ 
+                    code: Array.isArray(compilation) ? compilation.map(f => `// File: ${f.name}\n${f.code}`).join("\n\n") : (compilation.code || compilation),
+                    errors: []
+                }));
+            }
+            return;
+        }
+
+        // Default to JS for live execution
         let jsCode = compiler.generateJSCode(code);
         
-        // If it fails due to missing stubs, add them and retry
         if (jsCode.includes("Required functions are not defined")) {
             const stubs = `
             and noteOn(n:int,v:int,c:int) {}
