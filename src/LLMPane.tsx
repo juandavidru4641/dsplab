@@ -684,19 +684,20 @@ const LLMPane: React.FC<LLMPaneProps> = ({
       }
       
       if (turnCount >= MAX_TURNS) {
-        addDisplayMsg('system', `⚠️ Agent reached maximum turn limit (${MAX_TURNS}). Interrupted for safety.`);
-      } else if (!stopFlagRef.current) {
-        addDisplayMsg('system', "🏁 Agent cycle complete.");
+        addDisplayMsg('system', `⚠️ Maximum turn limit (${MAX_TURNS}) reached. The agent was interrupted to prevent an infinite loop.`);
+      } else if (stopFlagRef.current) {
+        addDisplayMsg('system', "🛑 Agent cycle was manually stopped by the user.");
+      } else {
+        addDisplayMsg('system', "🏁 Agent task complete: The model has no further actions to perform.");
       }
-    } catch (err: any) {
-      if (err.name === 'AbortError') {
-        addDisplayMsg('system', "🛑 Operation stopped by user.");
+      } catch (err: any) {
+      if (err.name === 'AbortError' || stopFlagRef.current) {
+        addDisplayMsg('system', "🛑 Agent cycle was manually stopped by the user.");
       } else {
         addDisplayMsg('assistant', `⚠️ Loop Error: ${err.message}`);
         console.error("Agent Loop Error:", err);
       }
-    } finally {
-      setIsLoading(false);
+      } finally {      setIsLoading(false);
       setStatus(null);
     }
     setMessages(currentConversation);
