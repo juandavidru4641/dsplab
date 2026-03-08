@@ -278,80 +278,42 @@
   border-radius: 4px;
 }
 
-.keyboard-inner {
-  position: relative;
-  display: flex;
-  margin: 0 auto; /* Center the keyboard if it fits */
-  padding: 0 10px;
-}
-
-.key {
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  padding-bottom: 6px;
-  transition: all 0.1s;
-  flex-shrink: 0;
-  user-select: none;
-}
-
-.key.white {
-  width: 22px;
-  height: 80px;
-  background: linear-gradient(to bottom, #eee 0%, #fff 100%);
-  border: 1px solid #ccc;
-  border-top: none;
-  border-radius: 0 0 3px 3px;
-  z-index: 1;
-  color: #888;
-}
-
-.key.white.active {
-  background: linear-gradient(to bottom, #ffcc00 0%, #ffaa00 100%);
-  border-color: #ccaa00;
-  color: #000;
-  transform: translateY(1px);
-}
-
-.key.black {
-  width: 14px;
-  height: 48px;
-  background: linear-gradient(to bottom, #444 0%, #111 100%);
-  position: absolute;
-  z-index: 2;
-  border-radius: 0 0 2px 2px;
-  border: 1px solid #000;
-  border-top: none;
-  color: #666;
-  box-shadow: 0 3px 6px rgba(0,0,0,0.6);
-}
-
-.key.black.active {
-  background: linear-gradient(to bottom, #ff4444 0%, #cc0000 100%);
-  border-color: #aa0000;
-  color: #fff;
-  height: 49px;
-}
-
-.key-label {
-  font-size: 8px;
-  font-weight: bold;
-  font-family: 'Fira Code', monospace;
-  margin-bottom: 2px;
-}
-
-.note-name {
-  font-size: 7px;
-  font-weight: normal;
-  opacity: 0.7;
-}
-
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 .animate-spin { animation: spin 1s linear infinite; }
 
 @keyframes agent-progress {
   0% { left: -30%; }
   100% { left: 100%; }
+}
+
+/* React Piano Overrides */
+.ReactPiano__Keyboard {
+  border-top: 1px solid #333;
+  font-family: inherit;
+}
+
+.ReactPiano__Key--white {
+  background: linear-gradient(to bottom, #eee 0%, #fff 100%) !important;
+  border: 1px solid #ccc !important;
+  border-top: none !important;
+  border-radius: 0 0 3px 3px !important;
+}
+
+.ReactPiano__Key--white.ReactPiano__Key--active {
+  background: linear-gradient(to bottom, #ffcc00 0%, #ffaa00 100%) !important;
+  border-color: #ccaa00 !important;
+}
+
+.ReactPiano__Key--black {
+  background: linear-gradient(to bottom, #444 0%, #111 100%) !important;
+  border: 1px solid #000 !important;
+  border-top: none !important;
+  border-radius: 0 0 2px 2px !important;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.6) !important;
+  z-index: 10 !important;
+}
+
+.ReactPiano__Key--black.ReactPiano__Key--active {
+  background: linear-gradient(to bottom, #ff4444 0%, #cc0000 100%) !important;
+  border-color: #aa0000 !important;
 }
