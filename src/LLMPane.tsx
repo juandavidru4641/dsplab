@@ -1296,9 +1296,10 @@ const LLMPane: React.FC<LLMPaneProps> = ({
     const msgId = addDisplayMsg('system', `[INSPIRATION] Consulting the DSP Architect for unique ideas...`, undefined, true);
     
     const inspirationPrompt = `You are a visionary DSP Architect. Come up with ONE highly creative, unique, and technically functional synthesizer or audio effect idea that can be implemented in Vult. 
-    Focus on interesting modulation, non-linearities, or physical modeling. 
+    Focus on MUSICALITY and PLAYABILITY. Ensure the results are harmonically pleasing and useful for a composer. 
+    Focus on interesting modulation, well-tuned non-linearities, or physical modeling of real instruments. 
     Provide only a concise 2-3 sentence engineering brief. 
-    Example: 'A chaotic wavefolder where the folding threshold is modulated by a self-correcting feedback loop, creating complex organic timbres.'`;
+    Example: 'A lush resonant ladder filter where the feedback is non-linearly saturated using a tanh function, creating a warm analog-style growl that responds dynamically to velocity.'`;
 
     try {
       let idea = "";
