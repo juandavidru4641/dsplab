@@ -19,6 +19,8 @@ interface SequencerProps {
   onNoteOff: (note: number) => void;
   length: number;
   setLength: (len: number) => void;
+  onSequencerStep?: (callback: (step: number) => void) => () => void;
+  updateSequencer?: (data: { isPlaying: boolean, bpm: number, steps: Step[], length: number }) => void;
 }
 
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -76,11 +78,26 @@ const NoteInput: React.FC<{ value: number, onChange: (val: number) => void }> = 
 };
 
 const Sequencer: React.FC<SequencerProps> = ({ 
-  steps, setSteps, bpm, setBpm, isPlaying, setIsPlaying, onNoteOn, onNoteOff, length, setLength 
+  steps, setSteps, bpm, setBpm, isPlaying, setIsPlaying, length, setLength, 
+  onSequencerStep, updateSequencer 
 }) => {
   const [currentStep, setCurrentStep] = useState(-1);
-  const lastNoteRef = useRef<number | null>(null);
-  const timerRef = useRef<number | null>(null);
+
+  // Sync state to AudioWorklet
+  useEffect(() => {
+    if (updateSequencer) {
+      updateSequencer({ isPlaying, bpm, steps, length });
+    }
+  }, [isPlaying, bpm, steps, length, updateSequencer]);
+
+  // Listen for ticks from AudioWorklet
+  useEffect(() => {
+    if (onSequencerStep) {
+      return onSequencerStep((step) => {
+        setCurrentStep(step);
+      });
+    }
+  }, [onSequencerStep]);
 
   const updateStep = (idx: number, patch: Partial<Step>) => {
     setSteps(prev => {
@@ -91,7 +108,7 @@ const Sequencer: React.FC<SequencerProps> = ({
   };
 
   const generateMelody = () => {
-    const root = 36 + Math.floor(Math.random() * 12); // Random root note in low octave
+    const root = 36 + Math.floor(Math.random() * 12);
     const newSteps = steps.map(() => {
       const scaleDegree = PENTATONIC_SCALE[Math.floor(Math.random() * PENTATONIC_SCALE.length)];
       const octaveShift = Math.floor(Math.random() * 2) * 12;
@@ -104,44 +121,6 @@ const Sequencer: React.FC<SequencerProps> = ({
     });
     setSteps(newSteps);
   };
-
-  const tick = () => {
-    setCurrentStep(prev => {
-      const next = (prev + 1) % length;
-      const step = steps[next];
-      const prevStep = steps[prev >= 0 ? prev : length - 1];
-
-      if (step.active) {
-        const velocity = step.accent ? 127 : 100;
-        if (lastNoteRef.current !== null && (!prevStep || !prevStep.slide)) {
-          onNoteOff(lastNoteRef.current);
-        }
-        onNoteOn(step.note, velocity);
-        lastNoteRef.current = step.note;
-      } else {
-        if (lastNoteRef.current !== null) {
-          onNoteOff(lastNoteRef.current);
-          lastNoteRef.current = null;
-        }
-      }
-      return next;
-    });
-  };
-
-  useEffect(() => {
-    if (isPlaying) {
-      const interval = (60 / bpm) * 1000 / 4;
-      timerRef.current = window.setInterval(tick, interval);
-    } else {
-      if (timerRef.current) clearInterval(timerRef.current);
-      if (lastNoteRef.current !== null) {
-        onNoteOff(lastNoteRef.current);
-        lastNoteRef.current = null;
-      }
-      setCurrentStep(-1);
-    }
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [isPlaying, bpm, steps, length]);
 
   return (
     <div className="sequencer-container" style={{ padding: '5px 12px' }}>

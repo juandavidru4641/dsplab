@@ -57,6 +57,17 @@ class VultProcessor extends AudioWorkletProcessor {
     this.isCrashed = false;
     this.lastError = null;
 
+    // Sequencer
+    this.seqState = {
+      isPlaying: false,
+      bpm: 120,
+      length: 16,
+      steps: [],
+      currentStep: -1,
+      sampleCounter: 0,
+      lastNote: null
+    };
+
     this.port.onmessage = (event) => {
       const { type, data } = event.data;
       if (type === 'updateCode') {
@@ -93,7 +104,6 @@ class VultProcessor extends AudioWorkletProcessor {
         }
       } else if (type === 'setSources') {
         this.sources = data.sources || [];
-        // Ensure phases and genStates match sources length
         this.phases = new Array(this.sources.length).fill(0);
         this.genStates = new Array(this.sources.length).fill(0);
       } else if (type === 'setSampleData') {
@@ -121,22 +131,42 @@ class VultProcessor extends AudioWorkletProcessor {
           this.phases[data.index] = 0;
         }
       } else if (type === 'noteOn' || type === 'noteOff' || type === 'controlChange') {
-        if (this.vultInstance && !this.isCrashed) {
-          const method = type === 'noteOn' ? (this.vultInstance.liveNoteOn || this.vultInstance.noteOn) :
-                         type === 'noteOff' ? (this.vultInstance.liveNoteOff || this.vultInstance.noteOff) :
-                         (this.vultInstance.liveControlChange || this.vultInstance.controlChange);
-          if (typeof method === 'function') {
-            try {
-              if (type === 'noteOff') method.call(this.vultInstance, data.note, data.channel);
-              else if (type === 'noteOn') method.call(this.vultInstance, data.note, data.velocity, data.channel);
-              else method.call(this.vultInstance, data.control, data.value, data.channel);
-            } catch(e) {
-              this.handleRuntimeCrash(e);
-            }
-          }
+        this.handleMIDIEvents(type, data);
+      } else if (type === 'setSequencer') {
+        this.seqState = { ...this.seqState, ...data };
+        if (data.isPlaying === false) {
+          this.killLastNote();
+          this.seqState.currentStep = -1;
+          this.seqState.sampleCounter = 0;
         }
+      } else if (type === 'setSampleRate') {
+        this.sampleRate = data.sampleRate || 44100;
       }
     };
+  }
+
+  handleMIDIEvents(type, data) {
+    if (this.vultInstance && !this.isCrashed) {
+      const method = type === 'noteOn' ? (this.vultInstance.liveNoteOn || this.vultInstance.noteOn) :
+                     type === 'noteOff' ? (this.vultInstance.liveNoteOff || this.vultInstance.noteOff) :
+                     (this.vultInstance.liveControlChange || this.vultInstance.controlChange);
+      if (typeof method === 'function') {
+        try {
+          if (type === 'noteOff') method.call(this.vultInstance, data.note, data.channel || 0);
+          else if (type === 'noteOn') method.call(this.vultInstance, data.note, data.velocity, data.channel || 0);
+          else method.call(this.vultInstance, data.control, data.value, data.channel || 0);
+        } catch(e) {
+          this.handleRuntimeCrash(e);
+        }
+      }
+    }
+  }
+
+  killLastNote() {
+    if (this.seqState.lastNote !== null) {
+      this.handleMIDIEvents('noteOff', { note: this.seqState.lastNote });
+      this.seqState.lastNote = null;
+    }
   }
 
   handleRuntimeCrash(e) {
@@ -207,13 +237,42 @@ class VultProcessor extends AudioWorkletProcessor {
     let sumSq = 0;
     let blockClips = 0;
 
+    const samplesPerTick = Math.floor((60 / this.seqState.bpm) * this.sampleRate / 4);
+
     for (let i = 0; i < numSamples; i++) {
+      
+      // Handle Sequencer Tick
+      if (this.seqState.isPlaying) {
+        if (this.seqState.sampleCounter <= 0) {
+          this.seqState.currentStep = (this.seqState.currentStep + 1) % this.seqState.length;
+          this.seqState.sampleCounter = samplesPerTick;
+          
+          const step = this.seqState.steps[this.seqState.currentStep];
+          const prevStep = this.seqState.steps[(this.seqState.currentStep + this.seqState.length - 1) % this.seqState.length];
+          
+          if (step && step.active) {
+            const vel = step.accent ? 127 : 100;
+            if (this.seqState.lastNote !== null && (!prevStep || !prevStep.slide)) {
+              this.killLastNote();
+            }
+            this.handleMIDIEvents('noteOn', { note: step.note, velocity: vel });
+            this.seqState.lastNote = step.note;
+          } else {
+            this.killLastNote();
+          }
+          
+          // Send step update to UI
+          this.port.postMessage({ type: 'seqStep', step: this.seqState.currentStep });
+        }
+        this.seqState.sampleCounter--;
+      }
+
       const inputValues = [];
       for (let s = 0; s < numInputs; s++) {
         const src = this.sources[s];
         if (!src) { inputValues.push(0); continue; }
         if (src.type === 'oscillator') {
-          const phaseInc = (src.freq || 440) / 44100;
+          const phaseInc = (src.freq || 440) / this.sampleRate;
           this.phases[s] = (this.phases[s] + (isNaN(phaseInc) ? 0 : phaseInc)) % 1.0;
           const p = this.phases[s];
           if (src.oscType === 'sine') inputValues.push(Math.sin(p * 2 * Math.PI));
@@ -268,14 +327,12 @@ class VultProcessor extends AudioWorkletProcessor {
             outR = outL;
           }
           
-          // Protection against NaN/Infinity
           if (isNaN(outL) || !isFinite(outL)) outL = 0;
           if (isNaN(outR) || !isFinite(outR)) outR = 0;
 
           outputL[i] = outL;
           if (outputR) outputR[i] = outR;
 
-          // Calculate Metrics
           const absL = Math.abs(outL);
           const absR = Math.abs(outR);
           const peak = Math.max(absL, absR);
@@ -283,7 +340,7 @@ class VultProcessor extends AudioWorkletProcessor {
           if (absL >= 0.999 || absR >= 0.999) blockClips++;
           sumSq += (outL * outL + outR * outR) / 2;
 
-          this.errorCount = 0; // Successful sample
+          this.errorCount = 0; 
 
         } catch (e) {
           this.errorCount++;

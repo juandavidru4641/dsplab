@@ -37,6 +37,7 @@ export class AudioEngine {
   // Listeners for UI state updates
   private stateListeners: ((state: Record<string, any>, probes: Record<string, number[]>) => void)[] = [];
   private errorListeners: ((error: string) => void)[] = [];
+  private seqStepListeners: ((step: number) => void)[] = [];
 
   constructor() {
     this.scopeBuffer = new Float32Array(2048);
@@ -57,6 +58,12 @@ export class AudioEngine {
     };
   }
 
+  public onSequencerStep(callback: (step: number) => void) {
+    this.seqStepListeners.push(callback);
+    return () => {
+      this.seqStepListeners = this.seqStepListeners.filter(l => l !== callback);
+    };
+  }
   public async getDevices() {
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
@@ -137,8 +144,9 @@ export class AudioEngine {
           }
         } else if (event.data.type === 'runtimeError') {
           this.errorListeners.forEach(l => l(event.data.error));
-        } else if (event.data.type === 'status' && !event.data.success) {
-          console.error("Worklet Error:", event.data.error);
+        } else if (event.data.type === 'seqStep') {
+          this.seqStepListeners.forEach(l => l(event.data.step));
+        } else if (event.data.type === 'status' && !event.data.success) {          console.error("Worklet Error:", event.data.error);
         }
       };
 
@@ -350,5 +358,10 @@ export class AudioEngine {
     }
   }
 
+  public setSequencer(data: { isPlaying: boolean, bpm: number, steps: any[], length: number }) {
+    if (this.workletNode) {
+      this.workletNode.port.postMessage({ type: 'setSequencer', data });
+    }
+  }
   public getIsPlaying() { return this.isPlaying; }
 }

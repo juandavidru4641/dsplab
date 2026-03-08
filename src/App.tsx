@@ -879,7 +879,20 @@ const App: React.FC = () => {
                 )}
                 {activeLabTab === 'seq' && (
                   <div className="sequencer-panel" style={{ height: '100%', overflowY: 'auto' }}>
-                    <Sequencer steps={seqSteps} setSteps={setSeqSteps} bpm={seqBpm} setBpm={setSeqBpm} isPlaying={seqPlaying} setIsPlaying={setSeqPlaying} onNoteOn={(note, vel) => audioEngineRef.current.sendNoteOn(note, vel, 0)} onNoteOff={(note) => audioEngineRef.current.sendNoteOff(note, 0)} length={seqLength} setLength={setSeqLength} />
+                    <Sequencer 
+                      steps={seqSteps} 
+                      setSteps={setSeqSteps} 
+                      bpm={seqBpm} 
+                      setBpm={setSeqBpm} 
+                      isPlaying={seqPlaying} 
+                      setIsPlaying={setSeqPlaying} 
+                      onNoteOn={(note, vel) => audioEngineRef.current.sendNoteOn(note, vel, 0)} 
+                      onNoteOff={(note) => audioEngineRef.current.sendNoteOff(note, 0)} 
+                      length={seqLength} 
+                      setLength={setSeqLength} 
+                      onSequencerStep={(cb) => audioEngineRef.current.onSequencerStep(cb)}
+                      updateSequencer={(data) => audioEngineRef.current.setSequencer(data)}
+                    />
                   </div>
                 )}
                 {activeLabTab === 'midi' && (
