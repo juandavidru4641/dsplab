@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Square, Timer, Music } from 'lucide-react';
+import { Play, Square, Timer, Music, Zap, FastForward } from 'lucide-react';
 
 export interface Step {
   active: boolean;
   note: number;
+  accent: boolean;
+  slide: boolean;
 }
 
 interface SequencerProps {
@@ -26,18 +28,10 @@ const Sequencer: React.FC<SequencerProps> = ({
   const lastNoteRef = useRef<number | null>(null);
   const timerRef = useRef<number | null>(null);
 
-  const toggleStep = (idx: number) => {
+  const updateStep = (idx: number, patch: Partial<Step>) => {
     setSteps(prev => {
       const next = [...prev];
-      next[idx] = { ...next[idx], active: !next[idx].active };
-      return next;
-    });
-  };
-
-  const updateNote = (idx: number, note: number) => {
-    setSteps(prev => {
-      const next = [...prev];
-      next[idx] = { ...next[idx], note };
+      next[idx] = { ...next[idx], ...patch };
       return next;
     });
   };
@@ -45,18 +39,30 @@ const Sequencer: React.FC<SequencerProps> = ({
   const tick = () => {
     setCurrentStep(prev => {
       const next = (prev + 1) % steps.length;
-      
-      // Stop previous note
-      if (lastNoteRef.current !== null) {
-        onNoteOff(lastNoteRef.current);
-        lastNoteRef.current = null;
-      }
-
-      // Play current note if active
       const step = steps[next];
-      if (step && step.active) {
-        onNoteOn(step.note, 100);
+      const prevStep = steps[prev >= 0 ? prev : steps.length - 1];
+
+      // Handle Slide/Legato logic
+      // If previous step was sliding and this one is active, we don't noteOff the previous one yet
+      // Or if this step is active, we trigger it.
+      
+      if (step.active) {
+        const velocity = step.accent ? 127 : 100;
+        
+        // If sliding from previous active note, we could potentially skip noteOff
+        // for some synth engines to interpret as legato.
+        if (lastNoteRef.current !== null && !prevStep.slide) {
+          onNoteOff(lastNoteRef.current);
+        }
+
+        onNoteOn(step.note, velocity);
         lastNoteRef.current = step.note;
+      } else {
+        // Not active, kill last note if it wasn't already killed
+        if (lastNoteRef.current !== null) {
+          onNoteOff(lastNoteRef.current);
+          lastNoteRef.current = null;
+        }
       }
 
       return next;
@@ -82,20 +88,20 @@ const Sequencer: React.FC<SequencerProps> = ({
 
   return (
     <div className="sequencer-container">
-      <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-        <div className="section-title" style={{ margin: 0 }}><Music size={12} /> NOTE SEQUENCER</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '5px' }}>
+        <div className="section-title" style={{ margin: 0 }}><Music size={12} /> TB-STYLE SEQUENCER</div>
         
         <button 
           onClick={() => setIsPlaying(!isPlaying)}
           style={{ 
-            background: isPlaying ? '#ff4444' : '#007acc', 
+            background: isPlaying ? '#ff4444' : '#00ff00', 
             border: 'none', borderRadius: '4px', padding: '4px 12px', 
-            color: '#fff', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer',
+            color: '#000', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer',
             display: 'flex', alignItems: 'center', gap: '6px'
           }}
         >
           {isPlaying ? <Square size={10} fill="currentColor" /> : <Play size={10} fill="currentColor" />}
-          {isPlaying ? 'STOP' : 'PLAY'}
+          {isPlaying ? 'STOP' : 'RUN'}
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -103,7 +109,7 @@ const Sequencer: React.FC<SequencerProps> = ({
           <input 
             type="number" value={bpm} 
             onChange={(e) => setBpm(parseInt(e.target.value))} 
-            style={{ width: '40px', background: '#000', border: '1px solid #444', color: '#ffcc00', fontSize: '10px', padding: '2px' }}
+            className="bpm-input"
           />
           <span style={{ fontSize: '8px', color: '#666' }}>BPM</span>
         </div>
@@ -111,20 +117,46 @@ const Sequencer: React.FC<SequencerProps> = ({
 
       <div className="step-grid">
         {steps.map((step, i) => (
-          <div key={i} className="step-unit">
+          <div key={i} className={`step-column ${i === currentStep ? 'current' : ''}`}>
+            {/* Note Gate LED */}
             <div 
-              onClick={() => toggleStep(i)}
-              className={`step-led ${step.active ? 'active' : ''} ${i === currentStep ? 'current' : ''}`}
+              onClick={() => updateStep(i, { active: !step.active })}
+              className={`step-led gate ${step.active ? 'active' : ''}`}
+              title="Gate"
             />
-            <select 
-              value={step.note} 
-              onChange={(e) => updateNote(i, parseInt(e.target.value))}
-              className="step-note-select"
+            
+            {/* Accent Toggle */}
+            <div 
+              onClick={() => updateStep(i, { accent: !step.accent })}
+              className={`step-led accent ${step.accent ? 'active' : ''}`}
+              title="Accent"
             >
-              {Array.from({ length: 127 }).map((_, n) => (
-                <option key={n} value={n}>{NOTES[n % 12]}{Math.floor(n / 12) - 1}</option>
-              ))}
-            </select>
+              <Zap size={8} color={step.accent ? "#000" : "#444"} />
+            </div>
+
+            {/* Slide Toggle */}
+            <div 
+              onClick={() => updateStep(i, { slide: !step.slide })}
+              className={`step-led slide ${step.slide ? 'active' : ''}`}
+              title="Slide"
+            >
+              <FastForward size={8} color={step.slide ? "#000" : "#444"} />
+            </div>
+
+            {/* Visual Note Selector */}
+            <div className="note-selector-mini">
+              <select 
+                value={step.note} 
+                onChange={(e) => updateStep(i, { note: parseInt(e.target.value) })}
+                className="step-note-select"
+              >
+                {Array.from({ length: 127 }).map((_, n) => (
+                  <option key={n} value={n}>{NOTES[n % 12]}{Math.floor(n / 12) - 1}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="step-number">{i + 1}</div>
           </div>
         ))}
       </div>
