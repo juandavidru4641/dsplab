@@ -31,7 +31,6 @@ class VultProcessor extends AudioWorkletProcessor {
           const initFn = this.vultInstance.liveDefault || this.vultInstance.default;
           if (typeof initFn === 'function') initFn.call(this.vultInstance);
           
-          console.log("[Worklet] Vult instance loaded. Initializing telemetry...");
           this.port.postMessage({ type: 'status', success: true });
         } catch (err) {
           console.error("[Worklet] Update Error:", err);
@@ -65,34 +64,38 @@ class VultProcessor extends AudioWorkletProcessor {
     };
   }
 
-  // Ultra-aggressive state collection
+  // Exhaustive state collection
   collectState() {
     if (!this.vultInstance) return {};
     const state = {};
     
-    // Check main context first (standard Vult storage)
-    const contexts = [this.vultInstance.context, this.vultInstance._ctx, this.vultInstance];
-    
-    contexts.forEach(target => {
-      if (!target || typeof target !== 'object') return;
-      for (const key in target) {
-        // Skip noise
-        if (key === 'context' || key === '_ctx' || key.startsWith('live') || key.startsWith('Live_') || typeof target[key] === 'function') continue;
+    // Helper to extract from any object
+    const extract = (obj, prefix = "") => {
+      if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return;
+      
+      // Get all keys including non-enumerable if possible
+      const keys = Object.getOwnPropertyNames(obj);
+      for (const key of keys) {
+        if (key === 'context' || key === '_ctx' || key.startsWith('live') || key.startsWith('Live_')) continue;
         
-        const val = target[key];
+        const val = obj[key];
+        const fullKey = prefix ? `${prefix}.${key}` : key;
+        
         if (typeof val === 'number' || typeof val === 'boolean') {
-          state[key] = val;
-        } else if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
-          // Flatten sub-objects (like ADSR states) one level
-          for (const subKey in val) {
-            const subVal = val[subKey];
-            if (typeof subVal === 'number' || typeof subVal === 'boolean') {
-              state[`${key}.${subKey}`] = subVal;
-            }
-          }
+          state[fullKey] = val;
+        } else if (typeof val === 'object' && val !== null && prefix === "") {
+          // One level of nesting only to keep it clean
+          extract(val, key);
         }
       }
-    });
+    };
+
+    // Priority 1: The 'context' object inside the instance
+    if (this.vultInstance.context) extract(this.vultInstance.context);
+    if (this.vultInstance._ctx) extract(this.vultInstance._ctx);
+    
+    // Priority 2: The instance itself
+    extract(this.vultInstance);
 
     return state;
   }
@@ -140,13 +143,14 @@ class VultProcessor extends AudioWorkletProcessor {
           try {
             const result = processFn.apply(this.vultInstance, inputValues);
             
-            // PROBE SYNC (supports flattened paths)
             this.activeProbes.forEach(p => {
               const ctx = this.vultInstance.context || this.vultInstance._ctx || this.vultInstance;
               let val = 0;
               if (p.includes('.')) {
-                const [obj, key] = p.split('.');
-                if (ctx[obj] && typeof ctx[obj][key] === 'number') val = ctx[obj][key];
+                const parts = p.split('.');
+                let current = ctx;
+                for(const part of parts) { if(current) current = current[part]; }
+                val = typeof current === 'number' ? current : 0;
               } else {
                 val = ctx[p] !== undefined ? ctx[p] : this.vultInstance[p];
               }
@@ -172,7 +176,6 @@ class VultProcessor extends AudioWorkletProcessor {
       }
     }
 
-    // TELEMETRY
     if (this.vultInstance && this.telemetryCounter++ > 25) {
       this.telemetryCounter = 0;
       const state = this.collectState();
