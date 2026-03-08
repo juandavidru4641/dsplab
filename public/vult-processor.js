@@ -49,7 +49,6 @@ class VultProcessor extends AudioWorkletProcessor {
       if (type === 'updateCode') {
         try {
           this.vultInstance = null;
-          // We wrap the code to capture the class and provide the runtime
           const body = vultRuntime + "\n" +
                        "var exports = {};\n" + data.jsCode + "\n" +
                        "if (typeof vultProcess !== 'undefined') return vultProcess;\n" +
@@ -60,7 +59,6 @@ class VultProcessor extends AudioWorkletProcessor {
           if (!VultConstructor) throw new Error("vultProcess class not found");
           
           const instance = new VultConstructor();
-          // IMPORTANT: Bind the process function
           instance._processFn = instance.liveProcess || instance.process;
           
           const initFn = instance.liveDefault || instance.default;
@@ -104,18 +102,32 @@ class VultProcessor extends AudioWorkletProcessor {
     };
   }
 
+  // Optimized discovery: ignore large arrays and internal noise
   discoverVariables() {
     this.discoveredKeys = [];
     if (!this.vultInstance) return;
     const seen = new Set();
+    
     const scan = (obj, prefix = "", depth = 0) => {
       if (depth > 4 || !obj || typeof obj !== 'object' || seen.has(obj)) return;
+      
+      // SKIP LARGE ARRAYS / TABLES (Crucial for performance)
+      if (Array.isArray(obj) && obj.length > 32) return;
+      if (Object.keys(obj).length > 64) return; 
+
       seen.add(obj);
       const keys = Object.getOwnPropertyNames(obj);
       for (const key of keys) {
-        if (key === 'context' || key === '_ctx' || key === '_processFn' || key.startsWith('live') || key.startsWith('Live_') || typeof obj[key] === 'function') continue;
+        // Filter out internal Vult noise and methods
+        if (key === 'context' || key === '_ctx' || key === '_processFn' || 
+            key.startsWith('live') || key.startsWith('Live_') || 
+            key.startsWith('_inst') || // Hidden instances are often noise
+            !isNaN(parseInt(key)) || // Skip numeric indices (arrays)
+            typeof obj[key] === 'function') continue;
+        
         const val = obj[key];
         const fullKey = prefix ? prefix + "." + key : key;
+
         if (typeof val === 'number' || typeof val === 'boolean') {
           this.discoveredKeys.push({ path: fullKey, segments: fullKey.split('.') });
         } else if (typeof val === 'object' && val !== null) {
@@ -123,6 +135,7 @@ class VultProcessor extends AudioWorkletProcessor {
         }
       }
     };
+
     if (this.vultInstance.context) scan(this.vultInstance.context);
     if (this.vultInstance._ctx) scan(this.vultInstance._ctx);
     scan(this.vultInstance);
@@ -212,7 +225,7 @@ class VultProcessor extends AudioWorkletProcessor {
       }
     }
 
-    if (this.vultInstance && this.telemetryCounter++ > 23) {
+    if (this.vultInstance && this.telemetryCounter++ > 30) {
       this.telemetryCounter = 0;
       const state = this.getQuickState();
       this.port.postMessage({ type: 'telemetry', state, probes: this.probeBuffers });
