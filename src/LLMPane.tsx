@@ -449,14 +449,23 @@ const LLMPane: React.FC<LLMPaneProps> = ({
       role: m.role === 'user' ? 'user' : 'model',
       parts: m.parts.flatMap(p => {
         const apiParts: any[] = [];
-        if (p.thought) apiParts.push({ thought: p.thought });
-        if (p.text) apiParts.push({ text: p.text });
-        if (p.functionCall) {
-          const part: any = { functionCall: p.functionCall };
-          if (p.thought_signature) part.thought_signature = p.thought_signature;
-          apiParts.push(part);
+        // Metadata fields that should be preserved on split parts
+        const metadata: any = {};
+        if (p.thought_signature) metadata.thought_signature = p.thought_signature;
+
+        if (p.thought) {
+          apiParts.push({ thought: p.thought, ...metadata });
         }
-        if (p.functionResponse) apiParts.push({ functionResponse: p.functionResponse });
+        if (p.text) {
+          apiParts.push({ text: p.text, ...metadata });
+        }
+        if (p.functionCall) {
+          apiParts.push({ functionCall: p.functionCall, ...metadata });
+        }
+        if (p.functionResponse) {
+          apiParts.push({ functionResponse: p.functionResponse, ...metadata });
+        }
+
         if (apiParts.length === 0) return [{ text: "" }];
         return apiParts;
       })    }));
