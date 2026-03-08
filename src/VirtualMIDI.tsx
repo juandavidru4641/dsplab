@@ -95,7 +95,7 @@ const VirtualMIDI: React.FC<VirtualMIDIProps> = ({ onCC, onNoteOn, onNoteOff }) 
         ))}
       </div>
 
-      <div className="keyboard-container" ref={containerRef} style={{ height: '100px', background: '#111', padding: '10px' }}>
+      <div className="keyboard-container" ref={containerRef} style={{ height: '70px', background: '#111', padding: '5px 10px' }}>
         <Piano
           noteRange={{ first: firstNote, last: lastNote }}
           width={width - 20}
