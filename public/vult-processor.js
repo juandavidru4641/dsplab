@@ -6,34 +6,22 @@ class VultProcessor extends AudioWorkletProcessor {
     this.sources = [];
     this.phases = [];
     this.sampleRate = 44100;
+    this.telemetryCounter = 0;
 
     this.port.onmessage = (event) => {
       const { type, data } = event.data;
       if (type === 'updateCode') {
         try {
-          // Use a more robust way to capture the vultProcess class.
-          // We wrap the code in a function that returns the class defined within it.
-          const factory = new Function(`
-            ${data.jsCode}
+          const factory = new Function(\`
+            \${data.jsCode}
             if (typeof vultProcess !== 'undefined') return vultProcess;
             if (typeof exports !== 'undefined' && exports.vultProcess) return exports.vultProcess;
             throw new Error("Could not find vultProcess class in generated code.");
-          `);
-          
+          \`);
           const VultConstructor = factory();
-          
-          if (typeof VultConstructor !== 'function') {
-            throw new Error("vultProcess is not a constructor (type: " + typeof VultConstructor + ")");
-          }
-          
           this.vultInstance = new VultConstructor();
-          
-          // Ensure initial state is set
           const initFn = this.vultInstance.liveDefault || this.vultInstance.default;
-          if (typeof initFn === 'function') {
-            initFn.call(this.vultInstance);
-          }
-          
+          if (typeof initFn === 'function') initFn.call(this.vultInstance);
           this.port.postMessage({ type: 'status', success: true });
         } catch (err) {
           console.error("[Worklet] Update Error:", err);
@@ -68,7 +56,6 @@ class VultProcessor extends AudioWorkletProcessor {
   process(inputs, outputs, parameters) {
     const outputL = outputs[0] && outputs[0][0] ? outputs[0][0] : null;
     const outputR = outputs[0] && outputs[0][1] ? outputs[0][1] : outputL;
-    
     if (!outputL) return true;
 
     const liveInput = inputs[0] && inputs[0][0] ? inputs[0][0] : null;
@@ -77,11 +64,9 @@ class VultProcessor extends AudioWorkletProcessor {
 
     for (let i = 0; i < numSamples; i++) {
       const inputValues = [];
-      
       for (let s = 0; s < numInputs; s++) {
         const src = this.sources[s];
         if (!src) { inputValues.push(0); continue; }
-
         if (src.type === 'oscillator') {
           const phaseInc = (src.freq || 440) / this.sampleRate;
           this.phases[s] = (this.phases[s] + (isNaN(phaseInc) ? 0 : phaseInc)) % 1.0;
@@ -123,6 +108,33 @@ class VultProcessor extends AudioWorkletProcessor {
       } else {
         outputL[i] = 0; if (outputR) outputR[i] = 0;
       }
+    }
+
+    // TELEMETRY: Snapshot memory state ~20 times per second
+    if (this.vultInstance && this.telemetryCounter++ > 20) {
+      this.telemetryCounter = 0;
+      const state = {};
+      
+      // Capture context members
+      if (this.vultInstance.context) {
+        for (const key in this.vultInstance.context) {
+          const val = this.vultInstance.context[key];
+          if (typeof val === 'number' || typeof val === 'boolean') {
+            state[key] = val;
+          }
+        }
+      }
+      
+      // Capture instance members (some compilers put mem directly on this)
+      for (const key in this.vultInstance) {
+        if (key === 'context') continue;
+        const val = this.vultInstance[key];
+        if (typeof val === 'number' || typeof val === 'boolean') {
+          state[key] = val;
+        }
+      }
+      
+      this.port.postMessage({ type: 'telemetry', state });
     }
 
     return true;
