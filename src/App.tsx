@@ -42,6 +42,22 @@ fun controlChange(control: int, value: int, channel: int) {
   return input * volume;
 }
 `,
+  "Minimal": `fun process(input: real) : real {
+  return input;
+}
+
+and noteOn(note: int, velocity: int, channel: int) {
+}
+
+and noteOff(note: int, channel: int) {
+}
+
+and controlChange(control: int, value: int, channel: int) {
+}
+
+and default() {
+}
+`,
   "vs80": `// --- 1. UTILITIES & MATH ---
 fun pitchToRate(pitch: real) : real @[table(size=127,min=0.0,max=127.0)] {
     return 8.1757989156 * exp(0.05776226505 * pitch) / 44100.0;
