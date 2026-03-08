@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Search, X } from 'lucide-react';
+import { Search, X, Activity } from 'lucide-react';
 
 interface StateInspectorProps {
   getLiveState: () => Record<string, any>;
+  onProbe: (name: string) => void;
+  activeProbes: string[];
 }
 
-const StateInspector: React.FC<StateInspectorProps> = ({ getLiveState }) => {
+const StateInspector: React.FC<StateInspectorProps> = ({ getLiveState, onProbe, activeProbes }) => {
   const [state, setState] = useState<Record<string, any>>({});
   const [filter, setFilter] = useState('');
 
@@ -38,26 +40,32 @@ const StateInspector: React.FC<StateInspectorProps> = ({ getLiveState }) => {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: "'Fira Code', monospace" }}>
           <thead>
             <tr style={{ textAlign: 'left', borderBottom: '1px solid #333' }}>
-              <th style={{ fontSize: '9px', color: '#666', padding: '4px' }}>VARIABLE</th>
+              <th style={{ fontSize: '9px', color: '#666', padding: '4px' }}>VAR</th>
               <th style={{ fontSize: '9px', color: '#666', padding: '4px', textAlign: 'right' }}>VALUE</th>
+              <th style={{ width: '20px' }}></th>
             </tr>
           </thead>
           <tbody>
-            {filteredKeys.map(key => (
-              <tr key={key} style={{ borderBottom: '1px solid #252525' }}>
-                <td style={{ fontSize: '9px', color: '#aaa', padding: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{key}</td>
-                <td style={{ fontSize: '9px', color: '#ffcc00', padding: '4px', textAlign: 'right' }}>
-                  {typeof state[key] === 'number' ? state[key].toFixed(5) : String(state[key])}
-                </td>
-              </tr>
-            ))}
-            {filteredKeys.length === 0 && (
-              <tr>
-                <td colSpan={2} style={{ padding: '20px', textAlign: 'center', color: '#444', fontSize: '10px' }}>
-                  No active memory cells.
-                </td>
-              </tr>
-            )}
+            {filteredKeys.map(key => {
+              const isProbed = activeProbes.includes(key);
+              return (
+                <tr key={key} style={{ borderBottom: '1px solid #252525' }}>
+                  <td style={{ fontSize: '9px', color: '#aaa', padding: '6px 4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{key}</td>
+                  <td style={{ fontSize: '9px', color: '#ffcc00', padding: '6px 4px', textAlign: 'right' }}>
+                    {typeof state[key] === 'number' ? state[key].toFixed(5) : String(state[key])}
+                  </td>
+                  <td style={{ padding: '4px' }}>
+                    {typeof state[key] === 'number' && (
+                      <Activity 
+                        size={12} 
+                        style={{ cursor: 'pointer', color: isProbed ? '#00ff00' : '#444' }} 
+                        onClick={() => onProbe(key)}
+                      />
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

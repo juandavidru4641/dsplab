@@ -7,7 +7,7 @@ export interface VultInstance {
   controlChange?: Function;
 }
 
-export type SourceType = 'oscillator' | 'live' | 'cv' | 'silence' | 'test_noise';
+export type SourceType = 'oscillator' | 'live' | 'cv' | 'silence' | 'test_noise' | 'impulse' | 'step' | 'sweep';
 
 export interface InputSource {
   name: string;
@@ -16,6 +16,7 @@ export interface InputSource {
   value: number;
   deviceId?: string;
   oscType: 'sine' | 'sawtooth' | 'square' | 'triangle';
+  isCycling?: boolean;
 }
 
 export class AudioEngine {
@@ -26,6 +27,7 @@ export class AudioEngine {
   private spectrumBuffer: Uint8Array;
   private isPlaying = false;
   private liveState: Record<string, any> = {};
+  private probedStates: Record<string, Float32Array> = {};
   
   private sources: InputSource[] = [];
   private inputStream: MediaStream | null = null;
@@ -50,6 +52,18 @@ export class AudioEngine {
     }
   }
 
+  public setProbes(probes: string[]) {
+    if (this.workletNode) {
+      this.workletNode.port.postMessage({ type: 'setProbes', data: { probes } });
+    }
+  }
+
+  public triggerGenerator(index: number) {
+    if (this.workletNode) {
+      this.workletNode.port.postMessage({ type: 'trigger', data: { index } });
+    }
+  }
+
   public async start() {
     if (!this.audioContext) {
       this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -71,6 +85,9 @@ export class AudioEngine {
       this.workletNode.port.onmessage = (event) => {
         if (event.data.type === 'telemetry') {
           this.liveState = event.data.state;
+          if (event.data.probes) {
+            this.probedStates = event.data.probes;
+          }
         } else if (event.data.type === 'status' && !event.data.success) {
           console.error("Worklet Error:", event.data.error);
         }
@@ -114,10 +131,6 @@ export class AudioEngine {
 
   public async updateCode(vultCode: string) {
     try {
-      if (!vultCode.includes("process")) {
-        return { success: false, error: "No 'process' function defined." };
-      }
-
       const response = await fetch('/api/compile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -145,9 +158,8 @@ export class AudioEngine {
     }
   }
 
-  public getLiveState() {
-    return this.liveState;
-  }
+  public getLiveState() { return this.liveState; }
+  public getProbedStates() { return this.probedStates; }
 
   public getScopeData() {
     if (this.analyser) {

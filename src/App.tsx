@@ -209,6 +209,7 @@ const App: React.FC = () => {
   const [midiStatus, setMidiStatus] = useState('MIDI: Off');
   const [editorMarkers, setEditorMarkers] = useState<any[]>([]);
   const [showInspector, setShowInspector] = useState(false);
+  const [activeProbes, setActiveProbes] = useState<string[]>([]);
   
   const [inputs, setInputs] = useState<InputSource[]>([]);
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
@@ -281,7 +282,10 @@ const App: React.FC = () => {
     else {
       await ae.start();
       const result = await ae.updateCode(code);
-      if (result.success) setStatus('Running');
+      if (result.success) {
+        setStatus('Running');
+        ae.setProbes(activeProbes);
+      }
       else setStatus('Compile Error');
       setIsPlaying(true);
     }
@@ -335,6 +339,27 @@ const App: React.FC = () => {
       return next;
     });
   };
+
+  const toggleProbe = (name: string) => {
+    setActiveProbes(prev => {
+      const next = prev.includes(name) ? prev.filter(p => p !== name) : [...prev, name].slice(-1);
+      audioEngineRef.current.setProbes(next);
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setInputs(prev => prev.map(input => {
+        if (input.type === 'cv' && input.isCycling) {
+          const newValue = (Math.sin(Date.now() * 0.002) + 1) / 2;
+          return { ...input, value: newValue };
+        }
+        return input;
+      }));
+    }, 50);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSave = () => {
     const projects = JSON.parse(localStorage.getItem('vult_projects') || '{}');
@@ -456,11 +481,19 @@ const App: React.FC = () => {
               <div className="input-strips">
                 {inputs.map((input, i) => (
                   <div key={i} className="input-strip">
-                    <div className="strip-header">{input.name}</div>
+                    <div className="strip-header" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      {input.name}
+                      {(input.type === 'impulse' || input.type === 'step') && (
+                        <Zap size={10} style={{ cursor: 'pointer', color: '#ffcc00' }} onClick={() => audioEngineRef.current.triggerGenerator(i)} />
+                      )}
+                    </div>
                     <select value={input.type} onChange={(e) => updateInput(i, { type: e.target.value as SourceType })}>
                       <option value="oscillator">Oscillator</option>
                       <option value="live">Live Audio</option>
                       <option value="cv">CV Slider</option>
+                      <option value="impulse">Impulse</option>
+                      <option value="step">Step</option>
+                      <option value="sweep">Sweep</option>
                       <option value="test_noise">Test Noise</option>
                       <option value="silence">Silence</option>
                     </select>
@@ -478,9 +511,23 @@ const App: React.FC = () => {
                     )}
                     
                     {input.type === 'cv' && (
-                      <input type="range" min="0" max="1" step="0.01" value={input.value} onChange={(e) => updateInput(i, { value: parseFloat(e.target.value) })} />
+                      <div className="strip-controls" style={{ alignItems: 'center' }}>
+                        <input type="range" min="0" max="1" step="0.01" value={input.value} onChange={(e) => updateInput(i, { value: parseFloat(e.target.value) })} />
+                        <Activity 
+                          size={12} 
+                          style={{ cursor: "pointer", color: input.isCycling ? "#00ff00" : "#444" }} 
+                          onClick={() => updateInput(i, { isCycling: !input.isCycling })}
+                        />
+                      </div>
                     )}
                     
+                    {input.type === 'sweep' && (
+                      <div className="strip-controls">
+                        <input type="number" value={input.value} step="0.1" onChange={(e) => updateInput(i, { value: parseFloat(e.target.value) })} placeholder="Sec" />
+                        <Play size={10} style={{ cursor: 'pointer', color: '#ffcc00' }} onClick={() => audioEngineRef.current.triggerGenerator(i)} />
+                      </div>
+                    )}
+
                     {input.type === 'live' && (
                       <select value={input.deviceId} onChange={(e) => updateInput(i, { deviceId: e.target.value })}>
                         {audioDevices.map(d => <option key={d.deviceId} value={d.deviceId}>{d.label || 'Input'}</option>)}
@@ -500,12 +547,21 @@ const App: React.FC = () => {
           
           <div className="side-panel">
             <div className="scope-section">
-              <div className="section-title"><AudioWaveform size={12} /> ANALYZER</div>
-              <ScopeView getScopeData={() => audioEngineRef.current.getScopeData()} getSpectrumData={() => audioEngineRef.current.getSpectrumData()} />
+              <div className="section-title"><AudioWaveform size={12} /> DUAL-TRACE ANALYZER</div>
+              <ScopeView 
+                getScopeData={() => audioEngineRef.current.getScopeData()} 
+                getSpectrumData={() => audioEngineRef.current.getSpectrumData()} 
+                getProbedData={(name) => audioEngineRef.current.getProbedStates()[name] || null}
+                probes={activeProbes}
+              />
             </div>
             <div className="llm-section">
               {showInspector ? (
-                <StateInspector getLiveState={() => audioEngineRef.current.getLiveState()} />
+                <StateInspector 
+                  getLiveState={() => audioEngineRef.current.getLiveState()} 
+                  onProbe={toggleProbe}
+                  activeProbes={activeProbes}
+                />
               ) : (
                 <LLMPane onGenerateCode={handleCodeChange} systemPrompt={SYSTEM_PROMPT} />
               )}
