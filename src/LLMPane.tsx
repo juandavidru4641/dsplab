@@ -575,11 +575,23 @@ const LLMPane: React.FC<LLMPaneProps> = ({
                   const data = JSON.parse(line.substring(6));
                   if (data.usageMetadata) updateTokens(data.usageMetadata);
                   
-                  const parts = data.candidates?.[0]?.content?.parts || [];
-                  for (const part of parts) {
-                    // CRITICAL: Push every part exactly as received to preserve metadata (thought_signature)
-                    modelParts.push(part);
+                  const incomingParts = data.candidates?.[0]?.content?.parts || [];
+                  incomingParts.forEach((part: any, index: number) => {
+                    if (!modelParts[index]) {
+                      modelParts[index] = { ...part };
+                    } else {
+                      // Merge incremental updates
+                      if (part.text) modelParts[index].text = (modelParts[index].text || "") + part.text;
+                      if (part.thought) modelParts[index].thought = (modelParts[index].thought || "") + part.thought;
+                      if (part.functionCall) {
+                        modelParts[index].functionCall = { 
+                          ...(modelParts[index].functionCall || {}), 
+                          ...part.functionCall 
+                        };
+                      }
+                    }
 
+                    // Update UI
                     if (part.text) {
                       setStatus("Typing...");
                       if (!currentTextId) currentTextId = addDisplayMsg('assistant', "", undefined, true);
@@ -590,8 +602,7 @@ const LLMPane: React.FC<LLMPaneProps> = ({
                       if (!currentThoughtId) currentThoughtId = addDisplayMsg('thought', "", undefined, true);
                       addDisplayMsg('thought', part.thought, currentThoughtId, true);
                     }
-                  }
-                } catch (e) {}
+                  });                } catch (e) {}
               }
             }
           }
