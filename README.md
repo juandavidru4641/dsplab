@@ -4,6 +4,9 @@ A development environment and diagnostic laboratory for the Vult DSP language.
 
 <img width="3248" height="1956" alt="image" src="https://github.com/user-attachments/assets/9765091d-cac8-4ad8-81dd-fb08855cd5a0" />
 
+<img width="3248" height="2024" alt="image" src="https://github.com/user-attachments/assets/be8bef71-024f-4806-9fe9-9e2729eb19f5" />
+
+
 Vult-O-Mat integrates a low-latency AudioWorklet execution engine with server-side compilation and high-frequency telemetry. It provides a specialized workspace for designing, testing, and verifying audio algorithms intended for embedded hardware and desktop applications.
 
 ## Integrated AI Agent
