@@ -1,6 +1,6 @@
-# Vult-O-Mat
+# VultLab
 
-A development environment and diagnostic laboratory for the Vult DSP language.
+A professional development environment and diagnostic laboratory for DSP engineering.
 
 <img width="3248" height="1956" alt="image" src="https://github.com/user-attachments/assets/9765091d-cac8-4ad8-81dd-fb08855cd5a0" />
 
@@ -10,18 +10,18 @@ A development environment and diagnostic laboratory for the Vult DSP language.
 
 ## Demonstrations
 
-[![Vult-O-Mat Demo 1](https://img.youtube.com/vi/a9dpFKu8R3U/0.jpg)](https://www.youtube.com/watch?v=a9dpFKu8R3U)
-[![Vult-O-Mat Demo 2](https://img.youtube.com/vi/yIxnidwjYcY/0.jpg)](https://www.youtube.com/watch?v=yIxnidwjYcY)
+[![VultLab Demo 1](https://img.youtube.com/vi/a9dpFKu8R3U/0.jpg)](https://www.youtube.com/watch?v=a9dpFKu8R3U)
+[![VultLab Demo 2](https://img.youtube.com/vi/yIxnidwjYcY/0.jpg)](https://www.youtube.com/watch?v=yIxnidwjYcY)
 
-## Why Vult-O-Mat?
+## Why VultLab?
 
-Building custom synthesizers, audio effects, and plugins often involves a high barrier to entry—requiring deep knowledge of low-level optimization, threading, and complex mathematical verification. Vult-O-Mat removes these obstacles by combining the efficient Vult language with an intelligent development partner.
+Building custom synthesizers, audio effects, and plugins often involves a high barrier to entry—requiring deep knowledge of low-level optimization, threading, and complex mathematical verification. VultLab removes these obstacles by combining the efficient Vult language with an intelligent development partner.
 
 *   **Rapid Prototyping:** Implement complex DSP ideas in no time. The isolated execution environment allows you to iterate on oscillators, filters, and state machines without crashing your host.
 *   **Hardware-Ready Results:** Everything you build is ready for embedded deployment. One click exports highly optimized C++ code for Teensy, Daisy, and other modular hardware platforms.
 *   **AI-Accelerated Development:** The integrated agent handles the technical "heavy lifting"—from surgical bug fixes to real-time signal analysis—acting as a senior mentor that helps you build technically correct audio modules faster than ever before.
 
-Vult-O-Mat integrates a low-latency AudioWorklet execution engine with server-side compilation and high-frequency telemetry. It provides a specialized workspace for designing, testing, and verifying audio algorithms intended for embedded hardware and desktop applications.
+VultLab integrates a low-latency AudioWorklet execution engine with server-side compilation and high-frequency telemetry. It provides a specialized workspace for designing, testing, and verifying audio algorithms intended for embedded hardware and desktop applications.
 
 ## Integrated AI Agent
 
@@ -98,7 +98,7 @@ npm run build
 ```
 
 ## DSP Entry Point
-Vult-O-Mat expects a standard Vult process function:
+VultLab expects a standard Vult process function:
 ```vult
 fun process(input: real, cutoff: real) : real {
   // Your DSP logic here
@@ -108,9 +108,9 @@ fun process(input: real, cutoff: real) : real {
 
 ## Licensing
 
-Vult-O-Mat is licensed under a custom license that permits personal, educational, and non-commercial open-source use. 
+VultLab is licensed under a custom license that permits personal, educational, and non-commercial open-source use. 
 
-*   **Attribution:** Any project using this software or its derivatives must attribute the original author (syso) and the Vult-O-Mat project.
+*   **Attribution:** Any project using this software or its derivatives must attribute the original author (syso) and the VultLab project.
 *   **Commercial Use:** Requires a separate commercial license. Please contact the author for inquiries.
 
 See the [LICENSE](LICENSE) file for the full legal text.

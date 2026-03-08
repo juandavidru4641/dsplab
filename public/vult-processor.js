@@ -104,8 +104,11 @@ class VultProcessor extends AudioWorkletProcessor {
         }
       } else if (type === 'setSources') {
         this.sources = data.sources || [];
-        this.phases = new Array(this.sources.length).fill(0);
-        this.genStates = new Array(this.sources.length).fill(0);
+        // Only re-init if lengths changed to prevent phase reset on simple updates
+        if (this.phases.length !== this.sources.length) {
+          this.phases = new Array(this.sources.length).fill(0);
+          this.genStates = new Array(this.sources.length).fill(0);
+        }
       } else if (type === 'setSampleData') {
         this.sampleBuffers[data.index] = data.buffer;
         this.phases[data.index] = 0;
@@ -237,18 +240,19 @@ class VultProcessor extends AudioWorkletProcessor {
     let sumSq = 0;
     let blockClips = 0;
 
-    const samplesPerTick = Math.floor((60 / this.seqState.bpm) * this.sampleRate / 4);
+    const samplesPerTick = Math.floor((60 / (this.seqState.bpm || 120)) * this.sampleRate / 4);
 
     for (let i = 0; i < numSamples; i++) {
       
       // Handle Sequencer Tick
-      if (this.seqState.isPlaying) {
+      if (this.seqState.isPlaying && this.seqState.steps && this.seqState.steps.length > 0) {
         if (this.seqState.sampleCounter <= 0) {
-          this.seqState.currentStep = (this.seqState.currentStep + 1) % this.seqState.length;
+          this.seqState.currentStep = (this.seqState.currentStep + 1) % (this.seqState.length || 16);
           this.seqState.sampleCounter = samplesPerTick;
           
           const step = this.seqState.steps[this.seqState.currentStep];
-          const prevStep = this.seqState.steps[(this.seqState.currentStep + this.seqState.length - 1) % this.seqState.length];
+          const prevIdx = (this.seqState.currentStep + this.seqState.length - 1) % this.seqState.length;
+          const prevStep = this.seqState.steps[prevIdx];
           
           if (step && step.active) {
             const vel = step.accent ? 127 : 100;
@@ -261,8 +265,10 @@ class VultProcessor extends AudioWorkletProcessor {
             this.killLastNote();
           }
           
-          // Send step update to UI
-          this.port.postMessage({ type: 'seqStep', step: this.seqState.currentStep });
+          // Send step update to UI periodically, not every tick
+          if (this.seqState.currentStep % 1 === 0) {
+            this.port.postMessage({ type: 'seqStep', step: this.seqState.currentStep });
+          }
         }
         this.seqState.sampleCounter--;
       }

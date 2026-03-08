@@ -1,6 +1,6 @@
-Show HN: Vult-O-Mat – AI-Assisted DSP Workbench and Synth/FX Creator
+Show HN: VultLab – AI-Assisted DSP Workbench and Synth/FX Creator
 
-Vult-O-Mat is a complete, browser-based diagnostic workbench for building synthesizers and audio effects. It uses the Vult DSP language (OCaml-style DSL) to create highly optimized algorithms that can be instantly executed in the browser or exported as C++ for embedded hardware like Daisy, Teensy, or custom Eurorack modules.
+VultLab is a complete, browser-based diagnostic workbench for building synthesizers and audio effects. It uses the Vult DSP language (OCaml-style DSL) to create highly optimized algorithms that can be instantly executed in the browser or exported as C++ for embedded hardware like Daisy, Teensy, or custom Eurorack modules.
 
 The workbench integrates an autonomous AI Agent that acts as a collaborative sound designer. It is capable of surgical code refactoring, fixing feedback loop stability, and performing real-time spectral analysis to verify its own work.
 

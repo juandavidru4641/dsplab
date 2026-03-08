@@ -386,7 +386,7 @@ and default() {
 
 const SYSTEM_PROMPT = `
 Role: Senior DSP Research Scientist and Mentor. 
-Environment: Professional Real-time IDE with Live Telemetry, 12 CC Knobs (30-41), and 6-voice polyphony.
+Environment: VultLab – A Professional Real-time IDE with Live Telemetry, 12 CC Knobs (30-41), and 6-voice polyphony.
 
 STRICT VULT LANGUAGE CONSTRAINTS:
 1. DO NOT use 'and', 'or', 'not'. Use C-style '&&', '||', '!' operators ONLY.
@@ -765,7 +765,10 @@ const App: React.FC = () => {
   return (
     <div className="app-container">
       <div className="sidebar">
-        <div className="logo"><Zap color="#ffcc00" size={24} /><span>VULT</span></div>
+        <div className="logo" style={{ marginBottom: '30px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+          <Zap color="#ffcc00" size={24} />
+          <span style={{ fontSize: '8px', fontWeight: 'bold', color: '#ffcc00', letterSpacing: '1px' }}>VULTLAB</span>
+        </div>
         <div className="nav-item active" title="IDE"><Cpu size={18} /></div>
         <div className="nav-item" title="Save" onClick={handleSave}><Save size={18} /></div>
         <div className="nav-item" title="Download Vult" onClick={handleDownload}><Download size={18} /></div>

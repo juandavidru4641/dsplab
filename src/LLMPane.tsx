@@ -1269,7 +1269,7 @@ const LLMPane: React.FC<LLMPaneProps> = ({
     if (messages.length === 0 && !isLoading && !isInspirationLoading) {
       const savedMsgs = localStorage.getItem('llm_messages');
       if (!savedMsgs || JSON.parse(savedMsgs).length === 0) {
-        addDisplayMsg('assistant', "Welcome to the Vult-O-Mat Laboratory. I am your Senior DSP Assistant. Would you like to start with a professional preset or a minimal template?", undefined, false, [
+        addDisplayMsg('assistant', "Welcome to VultLab. I am your Senior DSP Assistant. Would you like to start with a professional preset or a minimal template?", undefined, false, [
           { label: "Load CS-80 (vs80)", value: "load_preset:vs80" },
           { label: "Biquad Filter", value: "load_preset:Biquad Filter" },
           { label: "Minimal Template", value: "load_preset:Minimal" }
