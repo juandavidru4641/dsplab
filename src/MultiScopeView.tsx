@@ -8,7 +8,7 @@ interface MultiScopeViewProps {
 const MultiScopeView: React.FC<MultiScopeViewProps> = ({ probes, getProbedData }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const historyRef = useRef<Record<string, number[]>>({});
-  const [timebase, setTimebase] = useState(500); // Number of points to show
+  const [timebase, setTimebase] = useState(500);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -19,52 +19,57 @@ const MultiScopeView: React.FC<MultiScopeViewProps> = ({ probes, getProbedData }
     let animationFrame: number;
 
     const colors = [
-      '#ffcc00', // Yellow
-      '#00ff00', // Green
-      '#00ccff', // Blue
-      '#ff00ff', // Magenta
-      '#ff5500', // Orange
-      '#00ffaa', // Teal
+      '#ffcc00', '#00ff00', '#00ccff', '#ff00ff', '#ff5500', '#00ffaa',
     ];
 
     const render = () => {
-      const width = canvas.width;
-      const height = canvas.height;
+      // Handle High DPI displays
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      if (canvas.width !== rect.width * dpr || canvas.height !== rect.height * dpr) {
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+      }
       
+      ctx.save();
+      ctx.scale(dpr, dpr);
+      
+      const drawWidth = rect.width;
+      const drawHeight = rect.height;
+
       ctx.fillStyle = '#050a05';
-      ctx.fillRect(0, 0, width, height);
+      ctx.fillRect(0, 0, drawWidth, drawHeight);
 
       // Draw Grid
       ctx.strokeStyle = 'rgba(0, 255, 0, 0.05)';
       ctx.lineWidth = 1;
-      for (let i = 0; i < width; i += 40) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, height); ctx.stroke(); }
-      for (let i = 0; i < height; i += 40) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(width, i); ctx.stroke(); }
+      for (let i = 0; i < drawWidth; i += 40) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, drawHeight); ctx.stroke(); }
+      for (let i = 0; i < drawHeight; i += 40) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(drawWidth, i); ctx.stroke(); }
 
       if (probes.length === 0) {
         ctx.fillStyle = '#444';
         ctx.font = '10px monospace';
         ctx.textAlign = 'center';
-        ctx.fillText('NO PROBES ACTIVE', width / 2, height / 2);
+        ctx.fillText('NO PROBES ACTIVE', drawWidth / 2, drawHeight / 2);
+        ctx.restore();
         animationFrame = requestAnimationFrame(render);
         return;
       }
 
-      // Update History from latest probe data
+      // Update History
       probes.forEach(probe => {
         const data = getProbedData(probe);
         if (data) {
           if (!historyRef.current[probe]) historyRef.current[probe] = [];
-          // Capture the latest value from the audio block for plotting
           const latestVal = data[data.length - 1];
           historyRef.current[probe].push(latestVal);
-          // Keep history limited to 2x timebase for smooth scrolling
           if (historyRef.current[probe].length > timebase) {
             historyRef.current[probe].shift();
           }
         }
       });
 
-      const laneHeight = height / probes.length;
+      const laneHeight = drawHeight / probes.length;
 
       probes.forEach((probe, idx) => {
         const history = historyRef.current[probe];
@@ -75,9 +80,7 @@ const MultiScopeView: React.FC<MultiScopeViewProps> = ({ probes, getProbedData }
         ctx.lineWidth = 1.5;
         ctx.beginPath();
 
-        const sliceWidth = width / (timebase - 1);
-        
-        // Auto-scale logic
+        const sliceWidth = drawWidth / (timebase - 1);
         let min = Math.min(...history);
         let max = Math.max(...history);
         let range = Math.max(0.0001, max - min);
@@ -86,18 +89,24 @@ const MultiScopeView: React.FC<MultiScopeViewProps> = ({ probes, getProbedData }
           const norm = (val - min) / range;
           const x = i * sliceWidth;
           const y = (idx * laneHeight) + (laneHeight - norm * laneHeight * 0.8) - (laneHeight * 0.1);
-          
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         });
         ctx.stroke();
 
-        // Label and Value
+        // Label and Value with better visibility
+        ctx.font = 'bold 10px monospace';
+        const labelText = `${probe}: ${history[history.length-1].toFixed(4)}`;
+        
+        // Text background for legibility
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        const textWidth = ctx.measureText(labelText).width;
+        ctx.fillRect(2, (idx * laneHeight) + 2, textWidth + 6, 14);
+
         ctx.fillStyle = color;
-        ctx.font = '9px monospace';
-        ctx.fillText(`${probe}: ${history[history.length-1].toFixed(4)}`, 5, (idx * laneHeight) + 12);
+        ctx.fillText(labelText, 5, (idx * laneHeight) + 12);
       });
 
+      ctx.restore();
       animationFrame = requestAnimationFrame(render);
     };
 
@@ -116,7 +125,7 @@ const MultiScopeView: React.FC<MultiScopeViewProps> = ({ probes, getProbedData }
         />
       </div>
       <div style={{ height: '250px', width: '100%', border: '1px solid #333', background: '#000', borderRadius: '8px', overflow: 'hidden' }}>
-        <canvas ref={canvasRef} width={800} height={250} style={{ width: '100%', height: '100%', display: 'block' }} />
+        <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
       </div>
     </div>
   );
