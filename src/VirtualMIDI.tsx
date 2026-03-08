@@ -8,11 +8,12 @@ interface VirtualMIDIProps {
   onNoteOn: (note: number, velocity: number) => void;
   onNoteOff: (note: number) => void;
   ccLabels: Record<number, string>;
+  initialState?: Record<string, any>;
 }
 
 const KEY_WIDTH = 22; // Targeted width for a white key
 
-const VirtualMIDI: React.FC<VirtualMIDIProps> = ({ onCC, onNoteOn, onNoteOff, ccLabels }) => {
+const VirtualMIDI: React.FC<VirtualMIDIProps> = ({ onCC, onNoteOn, onNoteOff, ccLabels, initialState }) => {
   const [kbEnabled, setKbEnabled] = useState(false);
   const [octave, setOctave] = useState(3);
   const [velocity, setVelocity] = useState(100);
@@ -27,11 +28,21 @@ const VirtualMIDI: React.FC<VirtualMIDIProps> = ({ onCC, onNoteOn, onNoteOff, cc
       const next = { ...prev };
       Object.keys(ccLabels).forEach(cc => {
         const num = parseInt(cc);
-        if (next[num] === undefined) next[num] = 64;
+        const varName = ccLabels[num].toLowerCase();
+        
+        // Try to find matching variable in DSP state (case-insensitive and dot-notation aware)
+        const actualVar = Object.keys(initialState || {}).find(k => k.toLowerCase().endsWith('.' + varName) || k.toLowerCase() === varName);
+        
+        if (actualVar && initialState![actualVar] !== undefined && typeof initialState![actualVar] === 'number') {
+          // Sync to actual: scale normalized real (0.0-1.0) to MIDI CC (0-127)
+          next[num] = Math.round(initialState![actualVar] * 127);
+        } else if (next[num] === undefined) {
+          next[num] = 64;
+        }
       });
       return next;
     });
-  }, [ccLabels]);
+  }, [ccLabels, initialState]);
 
   useEffect(() => {
     if (!containerRef.current) return;

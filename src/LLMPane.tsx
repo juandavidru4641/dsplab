@@ -216,6 +216,28 @@ const LLMPane: React.FC<LLMPaneProps> = ({
         }
       },
       {
+        name: "show_function",
+        description: "Returns the complete source code of a specific function by its name. Use this to inspect implementation details without reading the entire file.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            function_name: { type: "STRING", description: "The name of the function to show." }
+          },
+          required: ["function_name"]
+        }
+      },
+      {
+        name: "delete_function",
+        description: "Removes an entire function definition from the source code by its name.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            function_name: { type: "STRING", description: "The name of the function to delete." }
+          },
+          required: ["function_name"]
+        }
+      },
+      {
         name: "replace_function",
         description: "Replaces the entire body of a specific function by its name. This is faster and safer than line-based editing for functional updates.",
         parameters: {
@@ -871,6 +893,8 @@ const LLMPane: React.FC<LLMPaneProps> = ({
             'edit_lines': '[ACTION] Editing code block',
             'multi_edit': '[ACTION] Performing batch edits',
             'replace_function': '[ACTION] Replacing function block',
+            'show_function': '[RESEARCH] Inspecting function',
+            'delete_function': '[ACTION] Deleting function',
             'fix_boilerplate': '[ACTION] Restoring required handlers',
             'update_code': '[ACTION] Updating full code',
             'set_knob': '[TEST] Adjusting laboratory knob',
@@ -995,6 +1019,58 @@ const LLMPane: React.FC<LLMPaneProps> = ({
               addDisplayMsg('system', `[RESEARCH] Configuring logic analyzer probes: ${fc.args.probes.join(', ')}`);
               onSetProbes(fc.args.probes);
               result = { success: true };
+            } else if (name === 'show_function') {
+              const { function_name } = fc.args;
+              addDisplayMsg('system', `[RESEARCH] Inspecting function: ${function_name}`);
+              const code = codeRef.current;
+              const regex = new RegExp(`(fun|and)\\s+${function_name}\\s*\\([^)]*\\)\\s*(?::\\s*[a-zA-Z_]\\w*)?\\s*{`, 'g');
+              const match = regex.exec(code);
+              if (match) {
+                let braceCount = 1;
+                let endIdx = -1;
+                for (let i = match.index + match[0].length; i < code.length; i++) {
+                  if (code[i] === '{') braceCount++;
+                  if (code[i] === '}') braceCount--;
+                  if (braceCount === 0) {
+                    endIdx = i + 1;
+                    break;
+                  }
+                }
+                if (endIdx !== -1) {
+                  result = { code: code.substring(match.index, endIdx) };
+                } else {
+                  result = { error: "Unbalanced braces in function body." };
+                }
+              } else {
+                result = { error: `Function '${function_name}' not found.` };
+              }
+            } else if (name === 'delete_function') {
+              const { function_name } = fc.args;
+              addDisplayMsg('system', `[ACTION] Deleting function: ${function_name}`);
+              const code = codeRef.current;
+              const regex = new RegExp(`(fun|and)\\s+${function_name}\\s*\\([^)]*\\)\\s*(?::\\s*[a-zA-Z_]\\w*)?\\s*{`, 'g');
+              const match = regex.exec(code);
+              if (match) {
+                let braceCount = 1;
+                let endIdx = -1;
+                for (let i = match.index + match[0].length; i < code.length; i++) {
+                  if (code[i] === '{') braceCount++;
+                  if (code[i] === '}') braceCount--;
+                  if (braceCount === 0) {
+                    endIdx = i + 1;
+                    break;
+                  }
+                }
+                if (endIdx !== -1) {
+                  const updatedCode = code.substring(0, match.index) + code.substring(endIdx);
+                  const res = await onUpdateCode(updatedCode);
+                  result = { success: res.success, error: res.error };
+                } else {
+                  result = { error: "Unbalanced braces." };
+                }
+              } else {
+                result = { error: `Function '${function_name}' not found.` };
+              }
             } else if (name === 'replace_function') {
               const { function_name, new_code } = fc.args;
               addDisplayMsg('system', `[ACTION] Replacing function: ${function_name}`);
