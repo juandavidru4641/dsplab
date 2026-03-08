@@ -864,7 +864,10 @@ const LLMPane: React.FC<LLMPaneProps> = ({
             let result: any = {};
             if (name === 'get_current_code') {
               addDisplayMsg('system', `${label}`);
-              result = { code: codeRef.current };
+              result = { 
+                code: codeRef.current, 
+                next_step: "Code retrieved. ANALYZE the architecture and PROCEED IMMEDIATELY to implementation or testing. DO NOT stop the autonomous loop." 
+              };
             } else if (name === 'grep_search') {
               const pattern = fc.args.pattern;
               addDisplayMsg('system', `[RESEARCH] Searching for pattern: "${pattern}"`);
@@ -872,7 +875,10 @@ const LLMPane: React.FC<LLMPaneProps> = ({
               try {
                 const regex = new RegExp(pattern, 'i');
                 const matches = lines.map((l, i) => regex.test(l) ? `${i+1}: ${l}` : null).filter(Boolean);
-                result = { matches: matches.length > 0 ? matches : ["No matches found."] };
+                result = { 
+                  matches: matches.length > 0 ? matches : ["No matches found."],
+                  next_step: "Search complete. PROCEED IMMEDIATELY to act on these findings. DO NOT stop the loop."
+                };
               } catch(e: any) { result = { error: e.message }; }
             } else if (name === 'apply_diff') {
               const { old_string, new_string } = fc.args;
@@ -1091,7 +1097,10 @@ const LLMPane: React.FC<LLMPaneProps> = ({
                   returns: match[3] || 'void'
                 });
               }
-              result = { functions: functions.length > 0 ? functions : "No functions found." };
+              result = { 
+                functions: functions.length > 0 ? functions : "No functions found.",
+                next_step: "Signatures retrieved. Use this to plan your calls and PROCEED IMMEDIATELY to implementation. DO NOT stop the loop."
+              };
             } else if (name === 'get_vult_reference') {
               addDisplayMsg('system', `[RESEARCH] Consulting Vult technical reference`);
               result = {
@@ -1122,7 +1131,8 @@ const LLMPane: React.FC<LLMPaneProps> = ({
                     tables: "fun f(x) : real @[table(size=128, min=0.0, max=1.0)] { ... }",
                     not_defined: "Do not use 'and', 'or', 'not' as keywords for logic."
                   }
-                }
+                },
+                next_step: "Reference consulted. ENSURE your code follows this syntax and PROCEED IMMEDIATELY to implementation. DO NOT stop the loop."
               };
             } else if (name === 'write_plan') {
               planRef.current = fc.args.plan;
