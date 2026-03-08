@@ -115,7 +115,8 @@
   display: flex; 
   flex-direction: column; 
   border-right: 1px solid #333; 
-  overflow: hidden; 
+  overflow-y: auto; 
+  overflow-x: hidden;
   min-width: 0;
 }
 
@@ -152,7 +153,8 @@
   box-shadow: inset 0 8px 20px rgba(0,0,0,0.8);
   background-image: radial-gradient(#1a1a1a 1px, transparent 1px);
   background-size: 20px 20px;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   width: 100%;
 }
 
@@ -226,7 +228,8 @@
   background: #1a1a1a;
   border-top: 1px solid #333;
   user-select: none;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   min-width: 0;
   width: 100%;
 }
@@ -324,7 +327,9 @@
   background: #111;
   padding: 0 12px 8px 12px;
   gap: 8px;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: 100%;
 }
 
 .step-grid {
@@ -536,10 +541,11 @@
   cursor: pointer;
   user-select: none;
   border-bottom: 1px solid #222;
-  height: 28px;
+  height: 26px;
   flex-shrink: 0;
-  position: relative;
-  z-index: 5;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .section-header:hover {
@@ -553,7 +559,7 @@
 .dsp-lab.collapsed, 
 .sequencer-panel.collapsed, 
 .virtual-midi-panel.collapsed {
-  height: 28px !important;
+  height: 26px !important;
   overflow: hidden;
 }
 
