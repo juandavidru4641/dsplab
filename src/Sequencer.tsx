@@ -22,6 +22,7 @@ interface SequencerProps {
 }
 
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const PENTATONIC_SCALE = [0, 3, 5, 7, 10]; // Minor Pentatonic intervals
 
 const NoteInput: React.FC<{ value: number, onChange: (val: number) => void }> = ({ value, onChange }) => {
   const [isDragging, setIsDragging] = useState(false);
@@ -89,6 +90,21 @@ const Sequencer: React.FC<SequencerProps> = ({
     });
   };
 
+  const generateMelody = () => {
+    const root = 36 + Math.floor(Math.random() * 12); // Random root note in low octave
+    const newSteps = steps.map(() => {
+      const scaleDegree = PENTATONIC_SCALE[Math.floor(Math.random() * PENTATONIC_SCALE.length)];
+      const octaveShift = Math.floor(Math.random() * 2) * 12;
+      return {
+        active: Math.random() > 0.4,
+        note: root + scaleDegree + octaveShift,
+        accent: Math.random() > 0.7,
+        slide: Math.random() > 0.8
+      };
+    });
+    setSteps(newSteps);
+  };
+
   const tick = () => {
     setCurrentStep(prev => {
       const next = (prev + 1) % length;
@@ -141,6 +157,16 @@ const Sequencer: React.FC<SequencerProps> = ({
         >
           {isPlaying ? <Square size={8} fill="currentColor" /> : <Play size={8} fill="currentColor" />}
           {isPlaying ? 'STOP' : 'RUN'}
+        </button>
+
+        <button 
+          onClick={generateMelody}
+          style={{ 
+            background: '#333', border: '1px solid #444', borderRadius: '4px', padding: '2px 10px', 
+            color: '#ffcc00', fontSize: '9px', fontWeight: 'bold', cursor: 'pointer'
+          }}
+        >
+          GEN
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
