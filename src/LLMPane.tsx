@@ -292,6 +292,20 @@ const LLMPane: React.FC<LLMPaneProps> = ({ currentCode, onUpdateCode, systemProm
         </div>
       )}
 
+      {/* Agent Progress Bar */}
+      <div style={{ height: '2px', width: '100%', background: '#1a1a1a', position: 'relative', overflow: 'hidden' }}>
+        {isLoading && (
+          <div style={{ 
+            position: 'absolute', 
+            height: '100%', 
+            width: '30%', 
+            background: '#007acc', 
+            boxShadow: '0 0 10px #007acc',
+            animation: 'agent-progress 1.5s infinite linear' 
+          }} />
+        )}
+      </div>
+
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: '16px', scrollBehavior: 'smooth' }}>
         {displayMessages.map((m, i) => (
           <div key={i} style={{ 
