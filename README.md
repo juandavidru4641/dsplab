@@ -8,6 +8,13 @@ A development environment and diagnostic laboratory for the Vult DSP language.
 
 <img width="1624" height="1012" alt="Screenshot 2026-03-08 at 17 54 17" src="https://github.com/user-attachments/assets/03d3f66b-cb70-4d82-aff0-0d6aaff27f8a" />
 
+## Why Vult-O-Mat?
+
+Building custom synthesizers, audio effects, and plugins often involves a high barrier to entry—requiring deep knowledge of low-level optimization, threading, and complex mathematical verification. Vult-O-Mat removes these obstacles by combining the efficient Vult language with an intelligent development partner.
+
+*   **Rapid Prototyping:** Implement complex DSP ideas in no time. The isolated execution environment allows you to iterate on oscillators, filters, and state machines without crashing your host.
+*   **Hardware-Ready Results:** Everything you build is ready for embedded deployment. One click exports highly optimized C++ code for Teensy, Daisy, and other modular hardware platforms.
+*   **AI-Accelerated Development:** The integrated agent handles the technical "heavy lifting"—from surgical bug fixes to real-time signal analysis—acting as a senior mentor that helps you build technically correct audio modules faster than ever before.
 
 Vult-O-Mat integrates a low-latency AudioWorklet execution engine with server-side compilation and high-frequency telemetry. It provides a specialized workspace for designing, testing, and verifying audio algorithms intended for embedded hardware and desktop applications.
 
