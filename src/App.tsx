@@ -530,6 +530,11 @@ const App: React.FC = () => {
       await midiControllerRef.current.init();
       setMidiInputs(midiControllerRef.current?.getInputs() || []);
       ae.getDevices().then(setAudioDevices);
+
+      ae.onRuntimeError((err) => {
+        setStatus('Runtime Crash');
+        console.error("DSP Runtime Crash:", err);
+      });
     };
 
     startup();
@@ -823,7 +828,7 @@ const App: React.FC = () => {
           </div>
 
           <div className="spacer" />
-          <div className={`status-badge ${status === 'Compile Error' ? 'error' : ''}`}><Activity size={14} />{status}</div>
+          <div className={`status-badge ${ (status === 'Compile Error' || status === 'Runtime Crash') ? 'error' : ''}`}><Activity size={14} />{status}</div>
         </div>
 
         <div className="editor-layout">

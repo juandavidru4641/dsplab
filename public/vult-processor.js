@@ -52,11 +52,19 @@ class VultProcessor extends AudioWorkletProcessor {
       headroom: 0
     };
 
+    // Crash handling
+    this.errorCount = 0;
+    this.isCrashed = false;
+    this.lastError = null;
+
     this.port.onmessage = (event) => {
       const { type, data } = event.data;
       if (type === 'updateCode') {
         try {
           this.vultInstance = null;
+          this.isCrashed = false;
+          this.errorCount = 0;
+          
           const body = vultRuntime + "\n" + 
                        "var exports = {};\n" + 
                        data.jsCode + "\n" +
@@ -111,7 +119,7 @@ class VultProcessor extends AudioWorkletProcessor {
           this.phases[data.index] = 0;
         }
       } else if (type === 'noteOn' || type === 'noteOff' || type === 'controlChange') {
-        if (this.vultInstance) {
+        if (this.vultInstance && !this.isCrashed) {
           const method = type === 'noteOn' ? (this.vultInstance.liveNoteOn || this.vultInstance.noteOn) :
                          type === 'noteOff' ? (this.vultInstance.liveNoteOff || this.vultInstance.noteOff) :
                          (this.vultInstance.liveControlChange || this.vultInstance.controlChange);
@@ -120,11 +128,21 @@ class VultProcessor extends AudioWorkletProcessor {
               if (type === 'noteOff') method.call(this.vultInstance, data.note, data.channel);
               else if (type === 'noteOn') method.call(this.vultInstance, data.note, data.velocity, data.channel);
               else method.call(this.vultInstance, data.control, data.value, data.channel);
-            } catch(e) {}
+            } catch(e) {
+              this.handleRuntimeCrash(e);
+            }
           }
         }
       }
     };
+  }
+
+  handleRuntimeCrash(e) {
+    if (this.isCrashed) return;
+    this.isCrashed = true;
+    this.lastError = e.toString();
+    console.error("[Worklet] Runtime Crash:", e);
+    this.port.postMessage({ type: 'runtimeError', error: this.lastError });
   }
 
   discoverVariables() {
@@ -171,6 +189,13 @@ class VultProcessor extends AudioWorkletProcessor {
     const outputL = outputs[0] && outputs[0][0] ? outputs[0][0] : null;
     const outputR = outputs[0] && outputs[0][1] ? outputs[0][1] : outputL;
     if (!outputL) return true;
+
+    if (this.isCrashed) {
+      for (let i = 0; i < outputL.length; i++) {
+        outputL[i] = outputR[i] = 0;
+      }
+      return true;
+    }
 
     const liveInput = inputs[0] && inputs[0][0] ? inputs[0][0] : null;
     const numSamples = outputL.length;
@@ -251,8 +276,15 @@ class VultProcessor extends AudioWorkletProcessor {
           if (absL >= 0.999 || absR >= 0.999) blockClips++;
           sumSq += (outL * outL + outR * outR) / 2;
 
+          this.errorCount = 0; // Successful sample
+
         } catch (e) {
+          this.errorCount++;
           outputL[i] = (outputR ? outputR[i] = 0 : 0);
+          if (this.errorCount > 100) {
+            this.handleRuntimeCrash(e);
+            break;
+          }
         }
       } else {
         outputL[i] = (outputR ? outputR[i] = 0 : 0);

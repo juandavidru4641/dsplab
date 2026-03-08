@@ -35,6 +35,7 @@ export class AudioEngine {
 
   // Listeners for UI state updates
   private stateListeners: ((state: Record<string, any>, probes: Record<string, number[]>) => void)[] = [];
+  private errorListeners: ((error: string) => void)[] = [];
 
   constructor() {
     this.scopeBuffer = new Float32Array(2048);
@@ -45,6 +46,13 @@ export class AudioEngine {
     this.stateListeners.push(callback);
     return () => {
       this.stateListeners = this.stateListeners.filter(l => l !== callback);
+    };
+  }
+
+  public onRuntimeError(callback: (error: string) => void) {
+    this.errorListeners.push(callback);
+    return () => {
+      this.errorListeners = this.errorListeners.filter(l => l !== callback);
     };
   }
 
@@ -119,6 +127,8 @@ export class AudioEngine {
           if (event.data.probes) {
             this.probedStates = event.data.probes;
           }
+        } else if (event.data.type === 'runtimeError') {
+          this.errorListeners.forEach(l => l(event.data.error));
         } else if (event.data.type === 'status' && !event.data.success) {
           console.error("Worklet Error:", event.data.error);
         }
