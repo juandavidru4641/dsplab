@@ -809,7 +809,7 @@ const App: React.FC = () => {
     // Completely recreate CC Lanes for the new preset
     setSeqCCTracks(Object.keys(newCCLabels).map(ccStr => ({
       cc: parseInt(ccStr),
-      steps: Array(32).fill(0)
+      steps: Array(128).fill(0)
     })));
 
     setInputs(parseVultInputs(newCode));

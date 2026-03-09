@@ -98,16 +98,16 @@ const CCLane: React.FC<{ track: CCTrack, length: number, currentStep: number, on
   const updateFromPointer = (e: React.PointerEvent<HTMLDivElement>, isStart: boolean) => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const xDist = e.clientX - rect.left - 14; 
     
-    // Each step is 32px (28px + 4px gap)
-    const stepFloat = Math.max(0, Math.min(length - 1, x / 32));
-    const stepIdx = Math.floor(stepFloat);
+    // Each step is 32px. 4 points per step = 8px per point. Center of step 1 is x=14.
+    const stepIdx = Math.max(0, Math.min(length * 4 - 1, Math.round(xDist / 8)));
+    const y = e.clientY - rect.top;
     const pctY = 1.0 - Math.max(0, Math.min(1, y / rect.height));
     const val = Math.floor(pctY * 127);
     
     const next = [...track.steps];
+    while(next.length < 128) next.push(next[next.length-1] || 0); // Upgrade legacy arrays
 
     if (isStart || !lastDrawRef.current) {
       next[stepIdx] = val;
@@ -149,7 +149,8 @@ const CCLane: React.FC<{ track: CCTrack, length: number, currentStep: number, on
     lastDrawRef.current = null;
   };
 
-  const pts = track.steps.slice(0, length).map((val, i) => [i * 32 + 14, 40 - (val / 127) * 40]);
+  const safeSteps = track.steps.length >= 128 ? track.steps : [...track.steps, ...Array(128 - track.steps.length).fill(track.steps[track.steps.length - 1] || 0)];
+  const pts = safeSteps.slice(0, length * 4).map((val, i) => [i * 8 + 14, 40 - ((val || 0) / 127) * 40]);
   let svgD = pts.length > 0 ? `M ${pts[0][0]} ${pts[0][1]}` : "";
   for (let i = 0; i < pts.length - 1; i++) {
     const p0 = i === 0 ? pts[pts.length - 1] : pts[i - 1]; // Use wrapped point for correct looping tangent
@@ -157,9 +158,9 @@ const CCLane: React.FC<{ track: CCTrack, length: number, currentStep: number, on
     const p2 = pts[i + 1];
     const p3 = i + 2 < pts.length ? pts[i + 2] : pts[0]; // Wrapped
     
-    const cp1x = p1[0] + 32 / 3;
+    const cp1x = p1[0] + 8 / 3;
     const cp1y = p1[1] + (p2[1] - p0[1]) / 6;
-    const cp2x = p2[0] - 32 / 3;
+    const cp2x = p2[0] - 8 / 3;
     const cp2y = p2[1] - (p3[1] - p1[1]) / 6;
     
     svgD += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2[0]} ${p2[1]}`;
@@ -178,15 +179,15 @@ const CCLane: React.FC<{ track: CCTrack, length: number, currentStep: number, on
         <div style={{ display: 'flex', gap: '4px' }}>
           {Array.from({length: 32}).map((_, i) => {
             const isActive = i < length;
-            // Ghost bar visual indication behind the curve
-            const pct = isActive ? Math.max(0, Math.min(100, (track.steps[i] / 127) * 100)) : 0;
+            // Ghost bar visual indication behind the curve based on the primary 4x step
+            const pct = isActive ? Math.max(0, Math.min(100, ((safeSteps[i * 4] || 0) / 127) * 100)) : 0;
             return (
               <div 
                 key={i} 
                 style={{ width: '28px', flexShrink: 0, height: '40px', background: i === currentStep ? '#1a1f2e' : '#161b22', border: i === currentStep ? '1px solid #7ec8ff' : '1px solid #222', borderRadius: '2px', position: 'relative', opacity: isActive ? 1 : 0.3 }}
               >
                 <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: `${pct}%`, background: '#ffcc00', borderRadius: '0 0 2px 2px', opacity: 0.15, pointerEvents: 'none' }} />
-                <div style={{ position: 'absolute', top: '-12px', left: 0, width: '100%', textAlign: 'center', fontSize: '8px', color: '#55', opacity: isActive ? 1 : 0 }}>{track.steps[i]}</div>
+                <div style={{ position: 'absolute', top: '-12px', left: 0, width: '100%', textAlign: 'center', fontSize: '8px', color: '#55', opacity: isActive ? 1 : 0 }}>{safeSteps[i * 4] || 0}</div>
               </div>
             )
           })}
@@ -195,8 +196,8 @@ const CCLane: React.FC<{ track: CCTrack, length: number, currentStep: number, on
         {/* SVG overlay for drawing the curve */}
         <svg style={{ position: 'absolute', left: '54px', top: 0, width: `${32 * 32}px`, height: '40px', pointerEvents: 'none' }}>
            <path d={svgD} fill="none" stroke="#ffcc00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-           {track.steps.slice(0, length).map((val, i) => (
-             <circle key={i} cx={i * 32 + 14} cy={40 - (val / 127) * 40} r="3" fill="#ffcc00" opacity={0.8} />
+           {safeSteps.slice(0, length * 4).map((val, i) => (
+             <circle key={i} cx={i * 8 + 14} cy={40 - ((val || 0) / 127) * 40} r={i % 4 === 0 ? "2.5" : "1.5"} fill="#ffcc00" opacity={0.8} />
            ))}
         </svg>
 
@@ -492,7 +493,7 @@ const Sequencer: React.FC<SequencerProps> = ({
              onChange={(e) => {
                const cc = parseInt(e.target.value);
                if (!ccTracks.find(t => t.cc === cc)) {
-                 setCCTracks(prev => [...prev, { cc, steps: Array(32).fill(0) }]);
+                 setCCTracks(prev => [...prev, { cc, steps: Array(128).fill(0) }]);
                }
              }}
              style={{ background: '#161b22', border: '1px solid #30363d', color: '#aaa', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', outline: 'none', cursor: 'pointer' }}
