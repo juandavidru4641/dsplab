@@ -1101,7 +1101,7 @@ const App: React.FC = () => {
             </div>
             
             {/* TABBED LABORATORY RACK */}
-            {!isMobile && activeLabTab !== 'seq' && <div className="resize-handle" onMouseDown={startResizing(setLabHeight, 100, 600)} />}
+            {!isMobile && <div className="resize-handle" onMouseDown={startResizing(setLabHeight, 100, 600)} />}
             <div className="lab-rack" style={{ height: isMobile ? '100%' : (activeLabTab === 'seq' ? 'max-content' : `${labHeight}px`), flex: isMobile ? 1 : 'none', display: isMobile && mobileView !== 'lab' ? 'none' : 'flex', flexDirection: 'column', background: '#1a1a1a', maxHeight: activeLabTab === 'seq' ? '85vh' : 'none', overflowY: activeLabTab === 'seq' ? 'auto' : 'visible' }}>
               <div className="lab-tabs" style={{ display: 'flex', background: '#111', borderBottom: '1px solid #333', flexShrink: 0 }}>
                 <div className={`lab-tab ${activeLabTab === 'lab' ? 'active' : ''}`} onClick={() => setActiveLabTab('lab')} style={{ padding: '8px 16px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer', color: activeLabTab === 'lab' ? '#00ff00' : '#666', borderRight: '1px solid #333', background: activeLabTab === 'lab' ? '#1a1a1a' : 'transparent', display: 'flex', alignItems: 'center', gap: '6px' }}>
