@@ -46,7 +46,7 @@ const CommunityPresetsModal: React.FC<CommunityPresetsModalProps> = ({ onClose, 
   const [selectedPreset, setSelectedPreset] = useState<any | null>(null);
   const [activeFilter, setActiveFilter] = useState('all');
   const [activeAuthor, setActiveAuthor] = useState('all');
-  const [activeTag, setActiveTag] = useState('all');
+  const [activeTags, setActiveTags] = useState<string[]>([]);
   const [previewCode, setPreviewCode] = useState('');
   const [showAllTags, setShowAllTags] = useState(false);
 
@@ -65,13 +65,23 @@ const CommunityPresetsModal: React.FC<CommunityPresetsModalProps> = ({ onClose, 
     const role = p.meta?.role || 'effect';
     const matchesRole = activeFilter === 'all' || role === activeFilter;
     const matchesAuthor = activeAuthor === 'all' || p.author === activeAuthor;
-    const matchesTag = activeTag === 'all' || (p.meta?.tags || []).includes(activeTag);
+    const matchesTags = activeTags.length === 0 || activeTags.every(t => (p.meta?.tags || []).includes(t));
     const matchesSearch = filter.length === 0 || 
       p.name.toLowerCase().includes(filter.toLowerCase()) || 
       p.author.toLowerCase().includes(filter.toLowerCase()) ||
       p.meta?.description?.toLowerCase().includes(filter.toLowerCase());
-    return matchesRole && matchesAuthor && matchesTag && matchesSearch;
+    return matchesRole && matchesAuthor && matchesTags && matchesSearch;
   });
+
+  const handleTagClick = (tag: string) => {
+    if (tag === 'all') {
+      setActiveTags([]);
+      return;
+    }
+    setActiveTags(prev => 
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    );
+  };
 
   useEffect(() => {
     if (filteredPresets.length > 0) {
