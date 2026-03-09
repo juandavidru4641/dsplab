@@ -12,6 +12,7 @@ const StateInspector: React.FC<StateInspectorProps> = ({ onStateUpdate, onProbe,
   const [filter, setFilter] = useState('');
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     // Subscribe to state updates from the audio engine
@@ -23,7 +24,7 @@ const StateInspector: React.FC<StateInspectorProps> = ({ onStateUpdate, onProbe,
 
   const allKeys = Object.keys(state);
   const filteredKeys = allKeys.filter(k => 
-    k.toLowerCase().includes(filter.toLowerCase())
+    (showAll || k.includes('mem')) && k.toLowerCase().includes(filter.toLowerCase())
   ).sort();
 
   const startEdit = (key: string, currentVal: any) => {
@@ -53,6 +54,10 @@ const StateInspector: React.FC<StateInspectorProps> = ({ onStateUpdate, onProbe,
           style={{ flex: 1, background: 'transparent', border: 'none', color: '#fff', fontSize: '12px', outline: 'none' }}
         />
         {filter && <X size={14} color="#666" style={{ cursor: 'pointer' }} onClick={() => setFilter('')} />}
+        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: '#888', cursor: 'pointer' }}>
+          <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} />
+          Show All
+        </label>
       </div>
       
       <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '4px' }}>
