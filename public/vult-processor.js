@@ -60,11 +60,11 @@ class VultProcessor extends AudioWorkletProcessor {
     // Deferred code compilation — stored here by onmessage, applied in process()
     this._pendingCode = null;
 
-    // Sequencer
     this.seqState = {
       isPlaying: false,
       bpm: 120,
       length: 16,
+      gateLength: 0.5,
       steps: [],
       currentStep: -1,
       sampleCounter: 0,
@@ -289,6 +289,14 @@ class VultProcessor extends AudioWorkletProcessor {
           // Send step update to UI periodically, not every tick
           if (this.seqState.currentStep % 1 === 0) {
             this.port.postMessage({ type: 'seqStep', step: this.seqState.currentStep });
+          }
+        } else {
+          const step = this.seqState.steps[this.seqState.currentStep];
+          const gateLength = this.seqState.gateLength !== undefined ? this.seqState.gateLength : 0.5;
+          const offThreshold = Math.floor(samplesPerTick * (1.0 - gateLength));
+          
+          if (step && this.seqState.sampleCounter === offThreshold && !step.slide) {
+             this.killLastNote();
           }
         }
         this.seqState.sampleCounter--;

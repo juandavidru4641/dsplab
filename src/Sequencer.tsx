@@ -19,8 +19,10 @@ interface SequencerProps {
   onNoteOff: (note: number) => void;
   length: number;
   setLength: (len: number) => void;
+  gateLength: number;
+  setGateLength: (len: number) => void;
   onSequencerStep?: (callback: (step: number) => void) => () => void;
-  updateSequencer?: (data: { isPlaying: boolean, bpm: number, steps: Step[], length: number }) => void;
+  updateSequencer?: (data: { isPlaying: boolean, bpm: number, steps: Step[], length: number, gateLength: number }) => void;
 }
 
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -79,6 +81,7 @@ const NoteInput: React.FC<{ value: number, onChange: (val: number) => void }> = 
 
 const Sequencer: React.FC<SequencerProps> = ({ 
   steps, setSteps, bpm, setBpm, isPlaying, setIsPlaying, length, setLength, 
+  gateLength, setGateLength,
   onSequencerStep, updateSequencer 
 }) => {
   const [currentStep, setCurrentStep] = useState(-1);
@@ -86,9 +89,9 @@ const Sequencer: React.FC<SequencerProps> = ({
   // Sync state to AudioWorklet
   useEffect(() => {
     if (updateSequencer) {
-      updateSequencer({ isPlaying, bpm, steps, length });
+      updateSequencer({ isPlaying, bpm, steps, length, gateLength });
     }
-  }, [isPlaying, bpm, steps, length, updateSequencer]);
+  }, [isPlaying, bpm, steps, length, gateLength, updateSequencer]);
 
   // Listen for ticks from AudioWorklet
   useEffect(() => {
@@ -163,6 +166,16 @@ const Sequencer: React.FC<SequencerProps> = ({
             style={{ width: '30px', padding: '1px 3px', fontSize: '10px' }}
           />
           <span style={{ fontSize: '7px', color: '#666' }}>LEN</span>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <input 
+            type="number" step="0.1" min="0.1" max="1.0" value={gateLength} 
+            onChange={(e) => setGateLength(Math.max(0.1, Math.min(1.0, parseFloat(e.target.value))))} 
+            className="bpm-input" 
+            style={{ width: '40px', padding: '1px 3px', fontSize: '10px' }}
+          />
+          <span style={{ fontSize: '7px', color: '#666' }}>GATE</span>
         </div>
       </div>
 

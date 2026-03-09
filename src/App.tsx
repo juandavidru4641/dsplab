@@ -469,6 +469,7 @@ const App: React.FC = () => {
   const [seqBpm, setSeqBpm] = useState(120);
   const [seqPlaying, setSeqPlaying] = useState(false);
   const [seqLength, setSeqLength] = useState(16);
+  const [seqGateLength, setSeqGateLength] = useState(0.5);
   
   const [inputs, setInputs] = useState<InputSource[]>([]);
   const [midiInputs, setMidiInputs] = useState<any[]>([]);
@@ -1068,8 +1069,10 @@ const App: React.FC = () => {
                       onNoteOff={(note) => audioEngineRef.current.sendNoteOff(note, 0)} 
                       length={seqLength} 
                       setLength={setSeqLength} 
+                      gateLength={seqGateLength}
+                      setGateLength={setSeqGateLength}
                       onSequencerStep={(cb) => audioEngineRef.current.onSequencerStep(cb)}
-                      updateSequencer={(data) => audioEngineRef.current.setSequencer(data)}
+                      updateSequencer={(data) => audioEngineRef.current.setSequencer(data as any)}
                     />
                   </div>
                 )}
