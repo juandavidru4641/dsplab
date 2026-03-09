@@ -465,17 +465,17 @@ const App: React.FC = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [codeHistory, setCodeHistory] = useState<{timestamp: number, code: string, msg: string}[]>([]);
   
-  const [seqSteps, setSeqSteps] = useState<Step[]>(Array.from({ length: 16 }, () => ({ active: false, note: 60, accent: false, slide: false })));
+  const [seqSteps, setSeqSteps] = useState<Step[]>(Array.from({ length: 32 }, () => ({ active: false, note: 60, accent: false, slide: false })));
   const [seqBpm, setSeqBpm] = useState(120);
   const [seqPlaying, setSeqPlaying] = useState(false);
   const [seqLength, setSeqLength] = useState(16);
   const [seqGateLength, setSeqGateLength] = useState(0.5);
   const [seqMode, setSeqMode] = useState<'melody' | 'drum'>('melody');
   const [seqDrumTracks, setSeqDrumTracks] = useState<any[]>(() => [
-    { name: 'BD', note: 36, steps: Array(16).fill(null).map(() => ({ active: false, accent: false })) },
-    { name: 'SD', note: 38, steps: Array(16).fill(null).map(() => ({ active: false, accent: false })) },
-    { name: 'CH', note: 42, steps: Array(16).fill(null).map(() => ({ active: false, accent: false })) },
-    { name: 'OH', note: 46, steps: Array(16).fill(null).map(() => ({ active: false, accent: false })) },
+    { name: 'BD', note: 36, steps: Array(32).fill(null).map(() => ({ active: false, accent: false })) },
+    { name: 'SD', note: 38, steps: Array(32).fill(null).map(() => ({ active: false, accent: false })) },
+    { name: 'CH', note: 42, steps: Array(32).fill(null).map(() => ({ active: false, accent: false })) },
+    { name: 'OH', note: 46, steps: Array(32).fill(null).map(() => ({ active: false, accent: false })) },
   ]);
   
   const [inputs, setInputs] = useState<InputSource[]>([]);

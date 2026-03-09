@@ -140,7 +140,8 @@ const Sequencer: React.FC<SequencerProps> = ({
     } else {
       const root = 36 + Math.floor(Math.random() * 12);
       const PENTATONIC_SCALE = [0, 3, 5, 7, 10];
-      const newSteps = steps.map(() => {
+      setSteps(prev => prev.map((step, idx) => {
+        if (idx >= length) return step; // Only randomize active length
         const scaleDegree = PENTATONIC_SCALE[Math.floor(Math.random() * PENTATONIC_SCALE.length)];
         const octaveShift = Math.floor(Math.random() * 2) * 12;
         return {
@@ -149,17 +150,16 @@ const Sequencer: React.FC<SequencerProps> = ({
           accent: Math.random() > 0.7,
           slide: Math.random() > 0.8
         };
-      });
-      setSteps(newSteps);
+      }));
     }
   };
 
   const clearPattern = () => {
     if (mode === 'drum') {
-      const next = drumTracks.map(t => ({...t, steps: t.steps.map((st:any) => ({...st, active: false}))}));
+      const next = drumTracks.map(t => ({...t, steps: t.steps.map((st:any) => ({...st, active: false, accent: false, slide: false}))}));
       setDrumTracks(next);
     } else {
-      setSteps(steps.map(s => ({ ...s, active: false })));
+      setSteps(steps.map(s => ({ ...s, active: false, accent: false, slide: false })));
     }
   }
 
@@ -227,8 +227,8 @@ const Sequencer: React.FC<SequencerProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <Layers size={12} color="#888" />
           <input 
-            type="number" min="1" max="16" value={length} 
-            onChange={(e) => setLength(Math.max(1, Math.min(16, parseInt(e.target.value) || 16)))} 
+            type="number" min="1" max="32" value={length} 
+            onChange={(e) => setLength(Math.max(1, Math.min(32, parseInt(e.target.value) || 16)))} 
             className="bpm-input" 
             style={{ width: '40px', padding: '2px 4px', fontSize: '11px', background: '#111', color: '#ffcc00', border: '1px solid #333', borderRadius: '3px', outline: 'none', fontFamily: 'monospace' }}
           />
