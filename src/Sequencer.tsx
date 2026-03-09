@@ -68,11 +68,12 @@ const NoteInput: React.FC<{ value: number, onChange: (val: number) => void }> = 
       onMouseDown={onMouseDown}
       className={`note-selector-drag ${isDragging ? 'dragging' : ''}`}
       style={{
-        width: '32px', height: '18px', background: '#000', border: '1px solid #444',
-        borderRadius: '3px', color: '#00ff00', fontSize: '8px', fontWeight: 'bold',
+        width: '36px', height: '22px', background: isDragging ? '#1a1f2e' : '#111', border: isDragging ? '1px solid #7ec8ff' : '1px solid #333',
+        borderRadius: '3px', color: isDragging ? '#7ec8ff' : '#00ff00', fontSize: '10px', fontWeight: 'bold', fontFamily: 'monospace',
         display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'ns-resize',
-        userSelect: 'none', transition: 'border-color 0.2s'
+        userSelect: 'none', transition: 'all 0.15s', marginTop: '4px'
       }}
+      title="Drag up/down to change pitch"
     >
       {noteName}{octave}
     </div>
@@ -131,78 +132,87 @@ const Sequencer: React.FC<SequencerProps> = ({
         <button 
           onClick={() => setIsPlaying(!isPlaying)}
           style={{ 
-            background: isPlaying ? '#ff4444' : '#00ff00', 
-            border: 'none', borderRadius: '4px', padding: '2px 10px', 
-            color: '#000', fontSize: '9px', fontWeight: 'bold', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: '4px'
+            background: isPlaying ? '#ff3366' : '#22863a', 
+            border: 'none', borderRadius: '4px', padding: '4px 12px', 
+            color: '#fff', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: '6px', letterSpacing: '0.5px'
           }}
         >
-          {isPlaying ? <Square size={8} fill="currentColor" /> : <Play size={8} fill="currentColor" />}
+          {isPlaying ? <Square size={10} fill="currentColor" /> : <Play size={10} fill="currentColor" />}
           {isPlaying ? 'STOP' : 'RUN'}
         </button>
 
         <button 
           onClick={generateMelody}
           style={{ 
-            background: '#333', border: '1px solid #444', borderRadius: '4px', padding: '2px 10px', 
-            color: '#ffcc00', fontSize: '9px', fontWeight: 'bold', cursor: 'pointer'
+            background: '#161b22', border: '1px solid #30363d', borderRadius: '4px', padding: '4px 12px', 
+            color: '#7ec8ff', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer', letterSpacing: '0.5px'
           }}
+          title="Generate random pentatonic sequence"
         >
           GEN
         </button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <Timer size={10} color="#666" />
-          <input type="number" value={bpm} onChange={(e) => setBpm(parseInt(e.target.value))} className="bpm-input" style={{ width: '35px', padding: '1px 3px', fontSize: '10px' }} />
-          <span style={{ fontSize: '7px', color: '#666' }}>BPM</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Timer size={12} color="#888" />
+          <input type="number" value={bpm} onChange={(e) => setBpm(parseInt(e.target.value) || 120)} className="bpm-input" style={{ width: '45px', padding: '2px 4px', fontSize: '11px', background: '#111', color: '#ffcc00', border: '1px solid #333', borderRadius: '3px', outline: 'none', fontFamily: 'monospace' }} />
+          <span style={{ fontSize: '9px', color: '#888', fontWeight: 'bold', letterSpacing: '0.5px' }}>BPM</span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <Layers size={10} color="#666" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Layers size={12} color="#888" />
           <input 
             type="number" min="1" max="16" value={length} 
-            onChange={(e) => setLength(Math.max(1, Math.min(16, parseInt(e.target.value))))} 
+            onChange={(e) => setLength(Math.max(1, Math.min(16, parseInt(e.target.value) || 16)))} 
             className="bpm-input" 
-            style={{ width: '30px', padding: '1px 3px', fontSize: '10px' }}
+            style={{ width: '40px', padding: '2px 4px', fontSize: '11px', background: '#111', color: '#ffcc00', border: '1px solid #333', borderRadius: '3px', outline: 'none', fontFamily: 'monospace' }}
           />
-          <span style={{ fontSize: '7px', color: '#666' }}>LEN</span>
+          <span style={{ fontSize: '9px', color: '#888', fontWeight: 'bold', letterSpacing: '0.5px' }}>LEN</span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <input 
             type="number" step="0.1" min="0.1" max="1.0" value={gateLength} 
-            onChange={(e) => setGateLength(Math.max(0.1, Math.min(1.0, parseFloat(e.target.value))))} 
+            onChange={(e) => setGateLength(Math.max(0.1, Math.min(1.0, parseFloat(e.target.value) || 0.5)))} 
             className="bpm-input" 
-            style={{ width: '40px', padding: '1px 3px', fontSize: '10px' }}
+            style={{ width: '45px', padding: '2px 4px', fontSize: '11px', background: '#111', color: '#ffcc00', border: '1px solid #333', borderRadius: '3px', outline: 'none', fontFamily: 'monospace' }}
           />
-          <span style={{ fontSize: '7px', color: '#666' }}>GATE</span>
+          <span style={{ fontSize: '9px', color: '#888', fontWeight: 'bold', letterSpacing: '0.5px' }}>GATE</span>
         </div>
       </div>
 
-      <div className="step-grid">
+      <div className="step-grid" style={{ display: 'flex', gap: '4px', overflowX: 'auto', paddingBottom: '8px' }}>
         {steps.slice(0, length).map((step, i) => (
-          <div key={i} className={`step-column ${i === currentStep ? 'current' : ''}`} style={{ padding: '2px' }}>
+          <div key={i} className={`step-column ${i === currentStep ? 'current' : ''}`} style={{ 
+            padding: '6px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px',
+            background: i === currentStep ? '#1a1f2e' : (Math.floor(i/4)%2 === 0 ? '#111' : '#161b22'),
+            border: i === currentStep ? '1px solid #7ec8ff' : '1px solid #222',
+            borderRadius: '4px', minWidth: '40px', transition: 'all 0.1s'
+          }}>
+            <div className="step-number" style={{ fontSize: '9px', color: i === currentStep ? '#7ec8ff' : '#666', fontWeight: 'bold', marginBottom: '2px' }}>{i + 1}</div>
             <div 
               onClick={() => updateStep(i, { active: !step.active })}
               className={`step-led gate ${step.active ? 'active' : ''}`}
-              style={{ width: '18px', height: '14px' }}
+              title="Gate (Active)"
+              style={{ width: '24px', height: '16px', background: step.active ? '#ff3366' : '#222', borderRadius: '2px', cursor: 'pointer', boxShadow: step.active ? '0 0 6px rgba(255, 51, 102, 0.4)' : 'none', border: '1px solid #111' }}
             />
             <div 
               onClick={() => updateStep(i, { accent: !step.accent })}
               className={`step-led accent ${step.accent ? 'active' : ''}`}
-              style={{ width: '18px', height: '14px' }}
+              title="Accent (High Velocity)"
+              style={{ width: '24px', height: '16px', background: step.accent ? '#ffcc00' : '#222', borderRadius: '2px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #111' }}
             >
-              <Zap size={6} color={step.accent ? "#000" : "#444"} />
+              <Zap size={10} color={step.accent ? "#000" : "#555"} />
             </div>
             <div 
               onClick={() => updateStep(i, { slide: !step.slide })}
               className={`step-led slide ${step.slide ? 'active' : ''}`}
-              style={{ width: '18px', height: '14px' }}
+              title="Slide (Tie Note)"
+              style={{ width: '24px', height: '16px', background: step.slide ? '#00ffcc' : '#222', borderRadius: '2px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #111' }}
             >
-              <FastForward size={6} color={step.slide ? "#000" : "#444"} />
+              <FastForward size={10} color={step.slide ? "#000" : "#555"} />
             </div>
             <NoteInput value={step.note} onChange={(val) => updateStep(i, { note: val })} />
-            <div className="step-number" style={{ fontSize: '7px' }}>{i + 1}</div>
           </div>
         ))}
       </div>
