@@ -220,7 +220,7 @@ const Sequencer: React.FC<SequencerProps> = ({
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <Timer size={12} color="#888" />
-          <input type="number" value={bpm} onChange={(e) => setBpm(parseInt(e.target.value) || 120)} className="bpm-input" style={{ width: '45px', padding: '2px 4px', fontSize: '11px', background: '#111', color: '#ffcc00', border: '1px solid #333', borderRadius: '3px', outline: 'none', fontFamily: 'monospace' }} />
+          <input type="number" value={bpm} onChange={(e) => setBpm(parseInt(e.target.value) || 120)} className="bpm-input" style={{ width: '45px', padding: '2px 8px', fontSize: '11px', background: '#111', color: '#ffcc00', border: '1px solid #333', borderRadius: '3px', outline: 'none', fontFamily: 'monospace' }} />
           <span style={{ fontSize: '9px', color: '#888', fontWeight: 'bold', letterSpacing: '0.5px' }}>BPM</span>
         </div>
 
@@ -230,7 +230,7 @@ const Sequencer: React.FC<SequencerProps> = ({
             type="number" min="1" max="32" value={length} 
             onChange={(e) => setLength(Math.max(1, Math.min(32, parseInt(e.target.value) || 16)))} 
             className="bpm-input" 
-            style={{ width: '40px', padding: '2px 4px', fontSize: '11px', background: '#111', color: '#ffcc00', border: '1px solid #333', borderRadius: '3px', outline: 'none', fontFamily: 'monospace' }}
+            style={{ width: '40px', padding: '2px 8px', fontSize: '11px', background: '#111', color: '#ffcc00', border: '1px solid #333', borderRadius: '3px', outline: 'none', fontFamily: 'monospace' }}
           />
           <span style={{ fontSize: '9px', color: '#888', fontWeight: 'bold', letterSpacing: '0.5px' }}>LEN</span>
         </div>
@@ -240,7 +240,7 @@ const Sequencer: React.FC<SequencerProps> = ({
             type="number" step="0.1" min="0.1" max="1.0" value={gateLength} 
             onChange={(e) => setGateLength(Math.max(0.1, Math.min(1.0, parseFloat(e.target.value) || 0.5)))} 
             className="bpm-input" 
-            style={{ width: '45px', padding: '2px 4px', fontSize: '11px', background: '#111', color: '#ffcc00', border: '1px solid #333', borderRadius: '3px', outline: 'none', fontFamily: 'monospace' }}
+            style={{ width: '45px', padding: '2px 8px', fontSize: '11px', background: '#111', color: '#ffcc00', border: '1px solid #333', borderRadius: '3px', outline: 'none', fontFamily: 'monospace' }}
           />
           <span style={{ fontSize: '9px', color: '#888', fontWeight: 'bold', letterSpacing: '0.5px' }}>GATE</span>
         </div>

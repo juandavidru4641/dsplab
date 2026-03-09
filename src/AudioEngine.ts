@@ -47,6 +47,7 @@ export class AudioEngine {
   private errorListeners: ((error: string) => void)[] = [];
   private seqStepListeners: ((step: number) => void)[] = [];
   private audioStatusListeners: ((status: { state: string; sampleRate: number }) => void)[] = [];
+  private midiActListeners: ((kind: string) => void)[] = [];
 
   constructor() {
     this.scopeBuffer = new Float32Array(2048);
@@ -71,6 +72,13 @@ export class AudioEngine {
     this.seqStepListeners.push(callback);
     return () => {
       this.seqStepListeners = this.seqStepListeners.filter(l => l !== callback);
+    };
+  }
+
+  public onMidiActivity(callback: (kind: string) => void) {
+    this.midiActListeners.push(callback);
+    return () => {
+      this.midiActListeners = this.midiActListeners.filter(l => l !== callback);
     };
   }
 
@@ -199,6 +207,8 @@ export class AudioEngine {
           this.errorListeners.forEach(l => l(event.data.error));
         } else if (event.data.type === 'seqStep') {
           this.seqStepListeners.forEach(l => l(event.data.step));
+        } else if (event.data.type === 'midiAct') {
+          this.midiActListeners.forEach(l => l(event.data.kind));
         } else if (event.data.type === 'status' && !event.data.success) {
           console.error("Worklet Error:", event.data.error);
         }

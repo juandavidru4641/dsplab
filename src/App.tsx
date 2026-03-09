@@ -477,6 +477,8 @@ const App: React.FC = () => {
     { name: 'CH', note: 42, steps: Array(32).fill(null).map(() => ({ active: false, accent: false })) },
     { name: 'OH', note: 46, steps: Array(32).fill(null).map(() => ({ active: false, accent: false })) },
   ]);
+
+  const [midiLeds, setMidiLeds] = useState({ note: false, cc: false });
   
   const [inputs, setInputs] = useState<InputSource[]>([]);
   const [midiInputs, setMidiInputs] = useState<any[]>([]);
@@ -594,6 +596,11 @@ const App: React.FC = () => {
       });
       ae.onRuntimeError(() => setStatus('Runtime Crash'));
       ae.onAudioStatusUpdate(setAudioStatus);
+      ae.onMidiActivity((kind) => {
+        const isNote = kind.startsWith('note');
+        setMidiLeds(prev => ({ ...prev, [isNote ? 'note' : 'cc']: true }));
+        setTimeout(() => setMidiLeds(prev => ({ ...prev, [isNote ? 'note' : 'cc']: false })), 80);
+      });
     };
     startup();
     return () => { audioEngineRef.current.stop(); };
@@ -975,6 +982,14 @@ const App: React.FC = () => {
             </select>
           </div>
           <div className="spacer" />
+          <div className="midi-leds" style={{ display: 'flex', gap: '8px', marginRight: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '9px', fontWeight: 'bold', color: '#666' }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: midiLeds.note ? '#00ffcc' : '#333', boxShadow: midiLeds.note ? '0 0 5px #00ffcc' : 'none', transition: 'background 0.05s' }} /> NOTE
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '9px', fontWeight: 'bold', color: '#666' }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: midiLeds.cc ? '#ffcc00' : '#333', boxShadow: midiLeds.cc ? '0 0 5px #ffcc00' : 'none', transition: 'background 0.05s' }} /> CC
+            </div>
+          </div>
           <div className="audio-metrics-badge" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '10px', color: '#888', marginRight: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: audioStatus.state === 'running' ? '#00ff00' : '#ff4444' }} />

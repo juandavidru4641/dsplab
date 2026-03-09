@@ -138,6 +138,9 @@ class VultProcessor extends AudioWorkletProcessor {
           if (type === 'noteOff') method.call(this.vultInstance, data.note, data.channel || 0);
           else if (type === 'noteOn') method.call(this.vultInstance, data.note, data.velocity, data.channel || 0);
           else method.call(this.vultInstance, data.control, data.value, data.channel || 0);
+          
+          // Notify the UI thread for LED blinking
+          this.port.postMessage({ type: 'midiAct', kind: type });
         } catch(e) {
           this.handleRuntimeCrash(e);
         }
