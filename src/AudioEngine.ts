@@ -102,72 +102,95 @@ export class AudioEngine {
     }
   }
 
-  public async start() {
-    if (!this.audioContext) {
-      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      try {
-        await this.audioContext.audioWorklet.addModule('/vult-processor.js');
-      } catch (e) {
-        throw new Error("AudioWorklet failed to load.");
+  // Tear down context and nodes so start() can rebuild from scratch
+  private async destroyContext() {
+    try {
+      if (this.workletNode) {
+        this.workletNode.disconnect();
+        this.workletNode = null;
       }
+      if (this.analyser) {
+        this.analyser.disconnect();
+        this.analyser = null;
+      }
+      if (this.audioContext) {
+        await this.audioContext.close();
+        this.audioContext = null;
+      }
+    } catch { /* ignore errors during teardown */ }
+  }
 
-      this.analyser = this.audioContext.createAnalyser();
-      this.analyser.fftSize = 2048;
+  private async buildContext() {
+    this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
 
-      this.workletNode = new AudioWorkletNode(this.audioContext, 'vult-processor', {
-        numberOfInputs: 1,
-        numberOfOutputs: 1,
-        outputChannelCount: [2]
-      });
+    // If the device disappears mid-session, tear down so the next RUN rebuilds cleanly
+    this.audioContext.onstatechange = () => {
+      if (this.audioContext?.state === 'closed' || this.audioContext?.state === ('interrupted' as any)) {
+        this.destroyContext();
+        this.isPlaying = false;
+      }
+    };
 
-      this.workletNode.port.onmessage = (event) => {
-        if (event.data.type === 'telemetry') {
-          this.liveState = event.data.state || {};
-          
-          // Maintain a rolling history of the last 20 states
-          this.telemetryHistory.push({ ...this.liveState });
-          if (this.telemetryHistory.length > 20) {
-            this.telemetryHistory.shift();
-          }
-
-          const probes = event.data.probes || {};
-          
-          if (event.data.metrics) {
-            this.audioMetrics = event.data.metrics;
-          }
-          
-          // Notify listeners with both state and probes
-          this.stateListeners.forEach(l => l(this.liveState, probes));
-          
-          if (event.data.probes) {
-            this.probedStates = event.data.probes;
-          }
-        } else if (event.data.type === 'runtimeError') {
-          this.errorListeners.forEach(l => l(event.data.error));
-        } else if (event.data.type === 'seqStep') {
-          this.seqStepListeners.forEach(l => l(event.data.step));
-        } else if (event.data.type === 'status' && !event.data.success) {          console.error("Worklet Error:", event.data.error);
-        }
-      };
-
-      this.workletNode.connect(this.analyser);
-      this.analyser.connect(this.audioContext.destination);
-      
-      this.workletNode.port.postMessage({ 
-        type: 'setSampleRate', 
-        data: { sampleRate: this.audioContext.sampleRate } 
-      });
-      this.workletNode.port.postMessage({ type: 'setSources', data: { sources: this.sources } });
+    try {
+      await this.audioContext.audioWorklet.addModule('/vult-processor.js');
+    } catch (e) {
+      await this.destroyContext();
+      throw new Error('AudioWorklet failed to load. Check that /vult-processor.js is served correctly.');
     }
-    
-    if (this.audioContext.state === 'suspended') {
-      await this.audioContext.resume();
+
+    this.analyser = this.audioContext.createAnalyser();
+    this.analyser.fftSize = 2048;
+
+    this.workletNode = new AudioWorkletNode(this.audioContext, 'vult-processor', {
+      numberOfInputs: 1,
+      numberOfOutputs: 1,
+      outputChannelCount: [2],
+    });
+
+    this.workletNode.port.onmessage = (event) => {
+      if (event.data.type === 'telemetry') {
+        this.liveState = event.data.state || {};
+        this.telemetryHistory.push({ ...this.liveState });
+        if (this.telemetryHistory.length > 20) this.telemetryHistory.shift();
+        const probes = event.data.probes || {};
+        if (event.data.metrics) this.audioMetrics = event.data.metrics;
+        this.stateListeners.forEach(l => l(this.liveState, probes));
+        if (event.data.probes) this.probedStates = event.data.probes;
+      } else if (event.data.type === 'runtimeError') {
+        this.errorListeners.forEach(l => l(event.data.error));
+      } else if (event.data.type === 'seqStep') {
+        this.seqStepListeners.forEach(l => l(event.data.step));
+      } else if (event.data.type === 'status' && !event.data.success) {
+        console.error('Worklet error:', event.data.error);
+      }
+    };
+
+    this.workletNode.connect(this.analyser);
+    this.analyser.connect(this.audioContext.destination);
+
+    this.workletNode.port.postMessage({ type: 'setSampleRate', data: { sampleRate: this.audioContext.sampleRate } });
+    this.workletNode.port.postMessage({ type: 'setSources', data: { sources: this.sources } });
+  }
+
+  public async start() {
+    // If context exists but is in an unrecoverable state, tear it down first
+    if (this.audioContext && (this.audioContext.state === 'closed' || this.audioContext.state === ('interrupted' as any))) {
+      await this.destroyContext();
     }
+
+    if (!this.audioContext) {
+      await this.buildContext();
+    }
+
+    if (this.audioContext!.state === 'suspended') {
+      await this.audioContext!.resume();
+    }
+
     this.isPlaying = true;
   }
 
   public stop() {
-    if (this.audioContext) {
+    if (this.audioContext && this.audioContext.state === 'running') {
       this.audioContext.suspend();
     }
     this.isPlaying = false;
