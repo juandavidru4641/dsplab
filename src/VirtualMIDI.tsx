@@ -173,8 +173,8 @@ const VirtualMIDI: React.FC<VirtualMIDIProps> = ({ onCC, onNoteOn, onNoteOff, cc
         })}
       </div>
 
-      <div className="keyboard-container" ref={containerRef} style={{ height: '80px', background: '#222', padding: '4px 10px 15px 10px', overflowX: 'auto', overflowY: 'hidden' }}>
-        <div style={{ display: 'flex', width: '100%', height: '100%', minWidth: '400px' }}>
+      <div className="keyboard-container" ref={containerRef} style={{ height: '100px', background: 'var(--bg-surface-elevated)', borderTop: '1px solid var(--border-subtle)', padding: '10px 15px', overflowX: 'auto', overflowY: 'hidden', display: 'flex', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', height: '100%', minWidth: '400px', maxWidth: '800px', margin: '0 auto', flex: 1 }}>
           {whiteKeys.map(wk => (
             <div
               key={wk.midi}
@@ -187,13 +187,13 @@ const VirtualMIDI: React.FC<VirtualMIDIProps> = ({ onCC, onNoteOn, onNoteOff, cc
                 position: 'relative',
                 border: '1px solid var(--border-subtle)',
                 background: activeNotes.includes(wk.midi) ? 'var(--accent-primary)' : 'linear-gradient(to bottom, #dcdcdc 0%, #ffffff 100%)',
-                borderRadius: '0 0 4px 4px',
-                boxShadow: activeNotes.includes(wk.midi) ? 'inset 0 2px 5px rgba(0,0,0,0.3)' : 'inset 0 2px 0 rgba(255,255,255,0.5), 0 2px 2px rgba(0,0,0,0.2)',
+                borderRadius: '0 0 6px 6px',
+                boxShadow: activeNotes.includes(wk.midi) ? 'inset 0 2px 5px rgba(0,0,0,0.3)' : 'inset 0 -4px 6px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.4)',
                 marginRight: '2px',
                 cursor: 'pointer',
               }}
             >
-              {activeNotes.includes(wk.midi) && <div style={{ position: 'absolute', bottom: '4px', left: '50%', transform: 'translateX(-50%)', width: '4px', height: '4px', borderRadius: '50%', background: '#ff4444' }} />}
+              {activeNotes.includes(wk.midi) && <div style={{ position: 'absolute', bottom: '6px', left: '50%', transform: 'translateX(-50%)', width: '6px', height: '6px', borderRadius: '50%', background: 'rgba(0,0,0,0.5)', filter: 'blur(1px)' }} />}
               {wk.blackMidi && (
                 <div
                   onPointerDown={(e) => { e.stopPropagation(); e.currentTarget.releasePointerCapture(e.pointerId); playNote(wk.blackMidi!); }}
@@ -202,15 +202,15 @@ const VirtualMIDI: React.FC<VirtualMIDIProps> = ({ onCC, onNoteOn, onNoteOff, cc
                   onPointerLeave={(e) => { e.stopPropagation(); stopNote(wk.blackMidi!); }}
                   style={{
                     position: 'absolute',
-                    right: '-18%',
-                    width: '36%',
-                    height: '65%',
+                    right: '-25%',
+                    width: '50%',
+                    height: '60%',
                     background: activeNotes.includes(wk.blackMidi) ? 'var(--accent-danger)' : 'linear-gradient(to bottom, #444 0%, var(--bg-surface) 100%)',
                     zIndex: 10,
-                    borderRadius: '0 0 2px 2px',
+                    borderRadius: '0 0 4px 4px',
                     border: '1px solid var(--border-subtle)',
                     borderTop: 'none',
-                    boxShadow: activeNotes.includes(wk.blackMidi) ? '0 1px 2px rgba(0,0,0,0.5)' : '0 2px 4px rgba(0,0,0,0.8)',
+                    boxShadow: activeNotes.includes(wk.blackMidi) ? '0 1px 2px rgba(0,0,0,0.8)' : '1px 2px 4px rgba(0,0,0,0.8), inset 0 2px 4px rgba(255,255,255,0.1)',
                   }}
                 />
               )}
