@@ -1070,7 +1070,7 @@ const App: React.FC = () => {
               fontFamily: 'monospace'
             }}
           >
-            <option value="v0">Vult v0</option>
+            <option value="v0">Vult 0.4.15</option>
             <option value="v1">Vult v1</option>
           </select>
 
