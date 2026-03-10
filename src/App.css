@@ -201,14 +201,14 @@
 }
 
 .play-btn.playing {
-  color: #ff4444;
-  border-color: rgba(255, 68, 68, 0.4);
-  background: linear-gradient(180deg, rgba(255, 68, 68, 0.15) 0%, rgba(255, 68, 68, 0.05) 100%);
-  box-shadow: 0 4px 12px rgba(255, 68, 68, 0.1), inset 0 1px 0 rgba(255,255,255,0.1);
+  color: var(--accent-success);
+  border-color: rgba(var(--accent-success-rgb), 0.4);
+  background: linear-gradient(180deg, rgba(var(--accent-success-rgb), 0.15) 0%, rgba(var(--accent-success-rgb), 0.05) 100%);
+  box-shadow: 0 4px 12px rgba(var(--accent-success-rgb), 0.1), inset 0 1px 0 rgba(255,255,255,0.1);
 }
 .play-btn.playing:hover {
-  background: linear-gradient(180deg, rgba(255, 68, 68, 0.2) 0%, rgba(255, 68, 68, 0.1) 100%);
-  box-shadow: 0 6px 16px rgba(255, 68, 68, 0.2), inset 0 1px 0 rgba(255,255,255,0.2);
+  background: linear-gradient(180deg, rgba(var(--accent-success-rgb), 0.2) 0%, rgba(var(--accent-success-rgb), 0.1) 100%);
+  box-shadow: 0 6px 16px rgba(var(--accent-success-rgb), 0.2), inset 0 1px 0 rgba(255,255,255,0.2);
 }
 
 .divider { width: 1px; height: 30px; background: rgba(255,255,255,0.1); flex-shrink: 0; border-radius: 1px; }
@@ -216,9 +216,9 @@
 .control-group { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
 .control-group .label { font-size: 9px; color: #888; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
 .control-group select {
-  background: rgba(0,0,0,0.4);
-  border: 1px solid rgba(255,255,255,0.1);
-  color: #fff;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary-bright);
   font-size: 11px;
   padding: 6px 10px;
   border-radius: 6px;
@@ -228,8 +228,8 @@
   transition: all 0.2s;
   cursor: pointer;
 }
-.control-group select:hover { background: rgba(0,0,0,0.6); border-color: rgba(255,255,255,0.2); }
-.control-group select:focus { border-color: var(--accent-primary); box-shadow: 0 0 0 2px rgba(var(--accent-primary-rgb),0.2); }
+.control-group select:hover { background: var(--bg-surface-active); border-color: var(--border-active); }
+.control-group select:focus { border-color: var(--border-focus); box-shadow: 0 0 0 2px rgba(var(--accent-primary-rgb),0.2); }
 
 .status-badge { display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.4); padding: 6px 12px; border-radius: 20px; font-size: 10px; color: #aaa; border: 1px solid rgba(255,255,255,0.1); transition: all 0.3s; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
 .status-badge.error { background: rgba(255,0,0,0.1); color: #ff4444; border-color: rgba(255,0,0,0.3); animation: flash-red 2s infinite; box-shadow: 0 0 12px rgba(255,0,0,0.2); }
@@ -295,7 +295,7 @@
   display: flex;
   flex-direction: column;
   flex: 0 0 auto;
-  max-height: 80vh;
+  max-height: 85vh;
   padding: 12px 10px;
   border-bottom: 1px solid var(--border-subtle);
   background: #000;
@@ -371,9 +371,9 @@
 }
 .input-strip select, .input-strip input {
   font-size: 10px;
-  background: rgba(0,0,0,0.5);
-  border: 1px solid rgba(255,255,255,0.1);
-  color: #fff;
+  background: var(--bg-base);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary-bright);
   width: 100%;
   padding: 4px;
   border-radius: 4px;

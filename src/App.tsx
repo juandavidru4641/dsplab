@@ -597,7 +597,7 @@ const App: React.FC = () => {
         (n) => {
           ae.sendNoteOff(n);
           if (midiNoteLedRef.current) {
-            midiNoteLedRef.current.style.background = '#ff4444'; // Red for Note Off
+            midiNoteLedRef.current.style.background = 'var(--accent-success)'; // Green for Note Off
             if (midiPulseTimeouts.current.note) clearTimeout(midiPulseTimeouts.current.note);
             midiPulseTimeouts.current.note = setTimeout(() => { if (midiNoteLedRef.current) midiNoteLedRef.current.style.background = '#333'; }, 100);
           }
@@ -605,7 +605,7 @@ const App: React.FC = () => {
         (c, v) => {
           ae.sendControlChange(c, v);
           if (midiCcLedRef.current) {
-            midiCcLedRef.current.style.background = 'var(--accent-primary)'; // Yellow for CC
+            midiCcLedRef.current.style.background = 'var(--accent-success)'; // Green for CC
             if (midiPulseTimeouts.current.cc) clearTimeout(midiPulseTimeouts.current.cc);
             midiPulseTimeouts.current.cc = setTimeout(() => { if (midiCcLedRef.current) midiCcLedRef.current.style.background = '#333'; }, 100);
           }
@@ -625,7 +625,7 @@ const App: React.FC = () => {
       ae.onMidiActivity((kind) => {
         const isNote = kind.startsWith('note');
         const ref = isNote ? midiNoteLedRef : midiCcLedRef;
-        const color = isNote ? '#00ffcc' : 'var(--accent-primary)';
+        const color = 'var(--accent-success)';
         if (ref.current) {
            ref.current.style.background = color;
            ref.current.style.boxShadow = `0 0 5px ${color}`;
@@ -1135,7 +1135,7 @@ const App: React.FC = () => {
                             )}
                           </div>
                           
-                          <select value={input.type} onChange={(e) => updateInput(i, { type: e.target.value as SourceType })} style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '10px', padding: '4px', borderRadius: '4px', width: '100%', outline: 'none' }}>
+                          <select value={input.type} onChange={(e) => updateInput(i, { type: e.target.value as SourceType })} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary-bright)', fontSize: '10px', padding: '4px', borderRadius: '4px', width: '100%', outline: 'none' }}>
                             <option value="cv">DC / Constant</option>
                             <option value="lfo">LFO</option>
                             <option value="oscillator">Audio Osc</option>
@@ -1148,7 +1148,7 @@ const App: React.FC = () => {
                           <div className="strip-controls" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.2)', borderRadius: '6px', padding: '8px 4px', marginTop: '4px', minHeight: '100px' }}>
                             {input.type === 'oscillator' && (
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', alignItems: 'center' }}>
-                                <select value={input.oscType} onChange={(e) => updateInput(i, { oscType: e.target.value as any })} style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', color: '#00ffcc', fontSize: '9px', padding: '2px 4px', borderRadius: '4px', outline: 'none', width: '90%', textAlign: 'center' }}>
+                                <select value={input.oscType} onChange={(e) => updateInput(i, { oscType: e.target.value as any })} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', color: 'var(--accent-cyan)', fontSize: '9px', padding: '2px 4px', borderRadius: '4px', outline: 'none', width: '90%', textAlign: 'center' }}>
                                   <option value="sine">SINE</option><option value="sawtooth">SAW</option><option value="square">SQUARE</option><option value="triangle">TRI</option>
                                 </select>
                                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
@@ -1159,7 +1159,7 @@ const App: React.FC = () => {
 
                             {input.type === 'lfo' && (
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', alignItems: 'center' }}>
-                                <select value={input.lfoShape || 'sine'} onChange={(e) => updateInput(i, { lfoShape: e.target.value as any })} style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--accent-primary)', fontSize: '9px', padding: '2px 4px', borderRadius: '4px', outline: 'none', width: '90%', textAlign: 'center' }}>
+                                <select value={input.lfoShape || 'sine'} onChange={(e) => updateInput(i, { lfoShape: e.target.value as any })} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', color: 'var(--accent-primary)', fontSize: '9px', padding: '2px 4px', borderRadius: '4px', outline: 'none', width: '90%', textAlign: 'center' }}>
                                   <option value="sine">SINE</option><option value="triangle">TRI</option><option value="square">SQUARE</option><option value="sawtooth">SAW</option>
                                 </select>
                                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
