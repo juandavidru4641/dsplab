@@ -53,6 +53,7 @@ export class AudioEngine {
   private seqStepListeners: ((step: number) => void)[] = [];
   private audioStatusListeners: ((status: { state: string; sampleRate: number }) => void)[] = [];
   private midiActListeners: ((kind: string) => void)[] = [];
+  private compilerVersion: 'v0' | 'v1' = 'v0';
 
   constructor() {
     this.scopeBufferL = new Float32Array(8192);
@@ -257,12 +258,17 @@ export class AudioEngine {
     this.isPlaying = true;
   }
 
+  public setCompilerVersion(version: 'v0' | 'v1') {
+    this.compilerVersion = version;
+  }
+
   public stop() {
     if (this.audioContext) {
       this.audioContext.suspend();
     }
     this.isPlaying = false;
   }
+
 
   public async updateCode(vultCode: string) {
     try {
@@ -272,7 +278,7 @@ export class AudioEngine {
       const response = await fetch('/api/compile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: vultCode }),
+        body: JSON.stringify({ code: vultCode, version: this.compilerVersion }),
         signal: controller.signal
       });
       clearTimeout(timeoutId);
@@ -308,7 +314,7 @@ export class AudioEngine {
       const response = await fetch('/api/compile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: vultCode }),
+        body: JSON.stringify({ code: vultCode, version: this.compilerVersion }),
         signal: controller.signal
       });
       clearTimeout(timeoutId);

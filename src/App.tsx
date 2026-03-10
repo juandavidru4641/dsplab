@@ -454,6 +454,7 @@ const App: React.FC = () => {
   const [projectName, setProjectName] = useState("My Vult Project");
   const [savedProjects, setSavedProjects] = useState<string[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [vultVersion, setVultVersion] = useState<'v0' | 'v1'>('v0');
   const [status, setStatus] = useState('Idle');
   const [_audioStatus, setAudioStatus] = useState<{ state: string; sampleRate: number }>({ state: 'suspended', sampleRate: 0 });
   const [editorMarkers, setEditorMarkers] = useState<any[]>([]);
@@ -643,6 +644,24 @@ const App: React.FC = () => {
     startup();
     return () => { audioEngineRef.current.stop(); };
   }, []);
+
+  useEffect(() => {
+    audioEngineRef.current.setCompilerVersion(vultVersion);
+    const triggerRecompile = async () => {
+      const playing = audioEngineRef.current.getIsPlaying();
+      if (playing) {
+        const result = await audioEngineRef.current.updateCode(code);
+        if (!result.success) { setStatus('Compile Error'); setEditorMarkers(parseVultError(result)); }
+        else { setStatus('Running'); setEditorMarkers([]); }
+      } else {
+        const result = await audioEngineRef.current.compileCheck(code);
+        if (!result.success) { setStatus('Syntax Error'); setEditorMarkers(parseVultError(result)); }
+        else { setStatus('Idle'); setEditorMarkers([]); }
+      }
+    };
+    triggerRecompile();
+  }, [vultVersion]);
+
 
   useEffect(() => {
     const timer = setInterval(() => { saveSnapshot("Autosave"); }, 300000);
@@ -1033,6 +1052,27 @@ const App: React.FC = () => {
             {isPlaying ? <Square size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
             {isPlaying ? 'STOP' : 'RUN'}
           </button>
+
+          <select
+            value={vultVersion}
+            onChange={(e) => setVultVersion(e.target.value as 'v0' | 'v1')}
+            title="Vult Compiler Version"
+            style={{
+              background: 'rgba(0,0,0,0.4)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              color: 'var(--text-color)',
+              padding: '6px 12px',
+              borderRadius: '6px',
+              outline: 'none',
+              fontSize: '12px',
+              cursor: 'pointer',
+              marginLeft: '8px',
+              fontFamily: 'monospace'
+            }}
+          >
+            <option value="v0">Vult 0.4.15</option>
+            <option value="v1">Vult v1</option>
+          </select>
 
           {!isMobile && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginLeft: '10px' }}>

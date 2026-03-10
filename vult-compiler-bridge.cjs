@@ -35,9 +35,17 @@ global.self = global;
 global.navigator = { userAgent: 'node' };
 
 const vultModule = require('./public/vultweb.cjs');
-const compiler = vultModule.vult || vultModule;
+const compilerV0 = vultModule.vult || vultModule;
 
-if (!compiler || typeof compiler.generateJSCode !== 'function') {
+let compilerV1 = null;
+try {
+    const vultModuleV1 = require('./public/v1-vultweb.cjs');
+    compilerV1 = vultModuleV1.vult || vultModuleV1;
+} catch (e) {
+    // V1 not loaded yet
+}
+
+if (!compilerV0 || typeof compilerV0.generateJSCode !== 'function') {
     process.stderr.write(JSON.stringify({ error: "Vult compiler failed to initialize correctly in Node." }));
     process.exit(1);
 }
@@ -124,9 +132,10 @@ let inputData = '';
 process.stdin.on('data', chunk => { inputData += chunk; });
 process.stdin.on('end', async () => {
     try {
-        const { code, target, javaPrefix } = JSON.parse(inputData);
+        const { code, target, javaPrefix, version } = JSON.parse(inputData);
         if (!code) throw new Error("No code provided");
 
+        const compiler = version === 'v1' && compilerV1 ? compilerV1 : compilerV0;
         const effectiveTarget = target || 'js';
 
         // JS target: use internal compiler (faster, no disk I/O)
