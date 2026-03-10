@@ -462,8 +462,8 @@ export class AudioEngine {
     const crest = rms > 1e-10 ? peak / rms : 0;
     const crestDb = crest > 1.0 ? 20 * Math.log10(crest) : 0;
 
-    stats['RMS'] = rmsDb > -100 ? rmsDb.toFixed(1) + ' dBFS' : '—';
-    stats['Peak'] = peakDb > -100 ? peakDb.toFixed(1) + ' dBFS' : '—';
+    stats['RMS'] = rmsDb > -100 ? (rmsDb > 0 ? '+' : '') + rmsDb.toFixed(1) + ' dBFS' : '—';
+    stats['Peak'] = peakDb > -100 ? (peakDb > 0 ? 'CLIP +' : '') + peakDb.toFixed(1) + ' dBFS' : '—';
     stats['Crest'] = crest > 1.0 ? crestDb.toFixed(1) + ' dB' : '—';
     stats['DC'] = Math.abs(dc) > 1e-5 ? (dc * 1000).toFixed(2) + ' m' : '~0';
 
@@ -476,7 +476,7 @@ export class AudioEngine {
     this.analyserL.getFloatFrequencyData(this.floatSpectrumBuffer as any);
     const fBins = this.floatSpectrumBuffer;
 
-    // Convert dB to linear power
+    // Convert dB to linear power, skip DC bin (0)
     const powers = new Float64Array(binCount);
     let totalPower = 0;
     let maxPower = 0;
@@ -486,9 +486,9 @@ export class AudioEngine {
     const startBin = Math.max(1, Math.floor(30 / binFreq));
     const endBin = Math.min(binCount, Math.floor(8000 / binFreq));
 
-    for (let i = 0; i < binCount; i++) {
+    for (let i = 1; i < binCount; i++) { // start at 1 to skip DC
       const db = fBins[i];
-      if (db < -150) { powers[i] = 0; continue; } // below noise floor
+      if (db < -150) { powers[i] = 0; continue; }
       const p = Math.pow(10, db / 10);
       powers[i] = p;
       totalPower += p;
@@ -505,19 +505,26 @@ export class AudioEngine {
     } else {
       const fundamentalHz = Math.round(fundamentalBin * binFreq);
 
-      // Sum power in a ±3 bin window around fundamental and its harmonics
-      const windowHalf = 3;
+      // Use a wider window (±8 bins) to capture the full Blackman main lobe
+      // For 8192 FFT the Blackman main lobe is ~8 bins wide at -3dB
+      const windowHalf = 8;
+      const usedBins = new Uint8Array(binCount); // prevent double-counting
       let signalPower = 0;
       let fundamentalPower = 0;
 
-      for (let h = 1; h <= 8; h++) {
+      for (let h = 1; h <= 10; h++) {
         const targetBin = Math.round(fundamentalBin * h);
         if (targetBin >= binCount) break;
 
-        const lo = Math.max(0, targetBin - windowHalf);
+        const lo = Math.max(1, targetBin - windowHalf);
         const hi = Math.min(binCount - 1, targetBin + windowHalf);
         let windowPower = 0;
-        for (let b = lo; b <= hi; b++) windowPower += powers[b];
+        for (let b = lo; b <= hi; b++) {
+          if (!usedBins[b]) {
+            windowPower += powers[b];
+            usedBins[b] = 1;
+          }
+        }
 
         signalPower += windowPower;
         if (h === 1) fundamentalPower = windowPower;
