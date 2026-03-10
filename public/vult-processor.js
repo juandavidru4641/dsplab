@@ -70,7 +70,7 @@ class VultProcessor extends AudioWorkletProcessor {
       tracks: [],
       currentStep: -1,
       sampleCounter: 0,
-      lastNote: null,
+      activeNotes: [],
       activeDrumNotes: []
     };
 
@@ -153,9 +153,9 @@ class VultProcessor extends AudioWorkletProcessor {
   }
 
   killLastNote() {
-    if (this.seqState.lastNote !== null) {
-      this.handleMIDIEvents('noteOff', { note: this.seqState.lastNote });
-      this.seqState.lastNote = null;
+    if (this.seqState.activeNotes && this.seqState.activeNotes.length > 0) {
+      this.seqState.activeNotes.forEach(n => this.handleMIDIEvents('noteOff', { note: n }));
+      this.seqState.activeNotes = [];
     }
   }
 
@@ -315,13 +315,30 @@ class VultProcessor extends AudioWorkletProcessor {
             const prevIdx = (this.seqState.currentStep + this.seqState.length - 1) % this.seqState.length;
             const prevStep = this.seqState.steps[prevIdx];
 
-            if (step && step.active) {
+            if (step && step.active && step.notes && step.notes.length > 0) {
               const vel = step.accent ? 127 : 100;
-              if (this.seqState.lastNote !== null && (!prevStep || !prevStep.slide)) {
+              if (this.seqState.activeNotes.length > 0 && (!prevStep || !prevStep.slide)) {
                 this.killLastNote();
               }
-              this.handleMIDIEvents('noteOn', { note: step.note, velocity: vel });
-              this.seqState.lastNote = step.note;
+              
+              // Only trigger notes that aren't already active if sliding
+              const newNotes = step.notes;
+              newNotes.forEach(n => {
+                if (!this.seqState.activeNotes.includes(n)) {
+                  this.handleMIDIEvents('noteOn', { note: n, velocity: vel });
+                }
+              });
+
+              // If slide is off and we didn't kill notes above, we might need to kill notes that aren't in the new set
+              if (prevStep && prevStep.slide) {
+                this.seqState.activeNotes.forEach(n => {
+                  if (!newNotes.includes(n)) {
+                    this.handleMIDIEvents('noteOff', { note: n });
+                  }
+                });
+              }
+
+              this.seqState.activeNotes = [...newNotes];
             } else {
               this.killLastNote();
             }

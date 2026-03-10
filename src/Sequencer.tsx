@@ -3,7 +3,7 @@ import { Play, Square, Timer, Layers, Drum, Music } from 'lucide-react';
 
 export interface Step {
   active: boolean;
-  note: number;
+  notes: number[];
   accent: boolean;
   slide: boolean;
 }
@@ -253,6 +253,24 @@ const Sequencer: React.FC<SequencerProps> = ({
     });
   };
 
+  const toggleNoteInStep = (stepIdx: number, note: number) => {
+    setSteps(prev => {
+      const next = [...prev];
+      const step = { ...next[stepIdx] };
+      const notes = step.notes ? [...step.notes] : [];
+      const noteIdx = notes.indexOf(note);
+      if (noteIdx > -1) {
+        notes.splice(noteIdx, 1);
+      } else {
+        notes.push(note);
+      }
+      step.notes = notes;
+      step.active = notes.length > 0;
+      next[stepIdx] = step;
+      return next;
+    });
+  };
+
   const updateDrumStep = (trackIdx: number, stepIdx: number, active: boolean) => {
     const next = [...drumTracks];
     const track = { ...next[trackIdx] };
@@ -281,12 +299,18 @@ const Sequencer: React.FC<SequencerProps> = ({
       const root = 36 + Math.floor(Math.random() * 12);
       const PENTATONIC_SCALE = [0, 3, 5, 7, 10];
       setSteps(prev => prev.map((step, idx) => {
-        if (idx >= length) return step; // Only randomize active length
-        const scaleDegree = PENTATONIC_SCALE[Math.floor(Math.random() * PENTATONIC_SCALE.length)];
-        const octaveShift = Math.floor(Math.random() * 2) * 12;
+        if (idx >= length) return step;
+        const notes: number[] = [];
+        const count = Math.random() > 0.8 ? 3 : (Math.random() > 0.6 ? 2 : 1);
+        for(let i=0; i<count; i++) {
+          const scaleDegree = PENTATONIC_SCALE[Math.floor(Math.random() * PENTATONIC_SCALE.length)];
+          const octaveShift = Math.floor(Math.random() * 2) * 12;
+          const n = root + scaleDegree + octaveShift;
+          if (!notes.includes(n)) notes.push(n);
+        }
         return {
           active: Math.random() > 0.4,
-          note: root + scaleDegree + octaveShift,
+          notes,
           accent: Math.random() > 0.7,
           slide: Math.random() > 0.8
         };
@@ -298,8 +322,7 @@ const Sequencer: React.FC<SequencerProps> = ({
     if (mode === 'drum') {
       const next = drumTracks.map(t => ({...t, steps: t.steps.map((st:any) => ({...st, active: false, accent: false, slide: false}))}));
       setDrumTracks(next);
-    } else {
-      setSteps(steps.map(s => ({ ...s, active: false, accent: false, slide: false, note: 60 }))); // Reset pitch to middle C
+      setSteps(steps.map(s => ({ ...s, active: false, accent: false, slide: false, notes: [] })));
     }
   }
 
@@ -406,33 +429,27 @@ const Sequencer: React.FC<SequencerProps> = ({
             {/* Stepper Columns */}
             {steps.map((step, i) => {
               const isActiveStep = i < length;
-              const stepNoteIdx = step.note % 12;
-              const stepOctave = Math.floor(step.note / 12) - 1;
+              // For visualization of octave, we'll use the first note or default to middle C octave
+              const firstNote = (step.notes && step.notes.length > 0) ? step.notes[0] : 60;
+              const displayOctave = Math.floor(firstNote / 12) - 1;
 
               return (
                 <div key={i} className={`melody-col seq-step-${i}`} style={{ display: 'flex', flexDirection: 'column', gap: '2px', width: '28px', flexShrink: 0, background: 'transparent', borderRadius: '2px', opacity: isActiveStep ? 1 : 0.3, pointerEvents: isActiveStep ? 'auto' : 'none', transition: 'opacity 0.2s' }}>
                   {GRID_NOTES.map(noteIdx => {
-                    const isMatch = stepNoteIdx === noteIdx;
-                    const isActive = isMatch && step.active;
-                    const isHoverVal = isMatch && !step.active;
+                    const absNote = (displayOctave + 1) * 12 + noteIdx;
+                    const isNoteActive = step.notes && step.notes.includes(absNote);
+                    const isActive = isNoteActive && step.active;
 
                     // Piano roll cell colors
                     let bg = '#161b22';
                     if (isActive) bg = '#00ffcc';
-                    else if (isHoverVal) bg = '#1a3333';
                     else if ([1, 3, 6, 8, 10].includes(noteIdx)) bg = '#0d1117'; 
 
                     return (
                       <div 
                         key={noteIdx}
                         className={`melody-cell seq-step-${i} ${isActive ? 'is-active-note' : ''}`}
-                        onClick={() => {
-                          if (isMatch) {
-                            updateMelodyStep(i, { active: !step.active });
-                          } else {
-                            updateMelodyStep(i, { active: true, note: (stepOctave + 1)*12 + noteIdx });
-                          }
-                        }}
+                        onClick={() => toggleNoteInStep(i, absNote)}
                         style={{ 
                           height: '18px', background: bg, borderRadius: '2px', cursor: 'pointer',
                           border: isActive ? '1px solid #fff' : '1px solid #222'
@@ -443,7 +460,15 @@ const Sequencer: React.FC<SequencerProps> = ({
 
                   {/* Controls under grid */}
                   <div style={{ marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                     <DragNumber value={stepOctave} onChange={(v) => updateMelodyStep(i, { note: (v+1)*12 + stepNoteIdx })} min={0} max={9} label="Octave" />
+                     <DragNumber 
+                        value={displayOctave} 
+                        onChange={(v) => {
+                          const diff = (v - displayOctave) * 12;
+                          const nextNotes = (step.notes || []).map(n => Math.max(0, Math.min(127, n + diff)));
+                          updateMelodyStep(i, { notes: nextNotes });
+                        }} 
+                        min={0} max={9} label="Octave" 
+                     />
                      
                      <div onClick={() => updateMelodyStep(i, { active: !step.active })} style={{ height: '14px', background: step.active ? '#ff3366' : '#222', borderRadius: '2px', cursor: 'pointer', border: '1px solid #111' }} title="Gate" />
                      <div onClick={() => updateMelodyStep(i, { accent: !step.accent })} style={{ height: '14px', background: step.accent ? 'var(--accent-primary)' : '#222', borderRadius: '2px', cursor: 'pointer', border: '1px solid #111' }} title="Accent" />

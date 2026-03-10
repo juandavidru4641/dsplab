@@ -477,7 +477,7 @@ const App: React.FC = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [codeHistory, setCodeHistory] = useState<{timestamp: number, code: string, msg: string}[]>([]);
   
-  const [seqSteps, setSeqSteps] = useState<Step[]>(Array.from({ length: 32 }, () => ({ active: false, note: 60, accent: false, slide: false })));
+  const [seqSteps, setSeqSteps] = useState<Step[]>(Array.from({ length: 32 }, () => ({ active: false, notes: [], accent: false, slide: false })));
   const [seqBpm, setSeqBpm] = useState(120);
   const [seqPlaying, setSeqPlaying] = useState(false);
   const [seqLength, setSeqLength] = useState(16);
