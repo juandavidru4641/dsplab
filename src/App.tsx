@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Square, Cpu, Zap, Activity, Save, Download, Sliders, AudioWaveform, Code2, History, Music, Keyboard, Globe, Search, Code, Wrench, HardDrive, PackageOpen } from 'lucide-react';
+import { Play, Square, Cpu, Zap, Activity, Save, Download, Sliders, Code2, History, Music, Keyboard, Globe, Search, Code, Wrench, HardDrive, PackageOpen } from 'lucide-react';
 import { AudioEngine } from './AudioEngine';
 import type { InputSource, SourceType } from './AudioEngine';
 import { MIDIController } from './MIDIController';
@@ -7,6 +7,7 @@ import VultEditor from './VultEditor';
 import type { VultEditorHandle } from './VultEditor';
 import ScopeView from './ScopeView';
 import SpectrumView from './SpectrumView';
+import StatsView from './StatsView';
 import LLMPane from './LLMPane';
 import VirtualMIDI from './VirtualMIDI';
 import StateInspector from './StateInspector';
@@ -1272,13 +1273,18 @@ const App: React.FC = () => {
             <div className="resize-handle-h" onMouseDown={startResizingH(setSidePanelWidth, 200, 600)} />
             )}
             <div className="side-panel" style={{ display: isMobile && mobileView !== 'panels' ? 'none' : 'flex', width: isMobile ? '100%' : `${sidePanelWidth}px` }}>
-            <div className="scope-section">              <div className="section-title"><AudioWaveform size={12} /> DUAL-TRACE ANALYZER</div>
-              <ScopeView getScopeData={() => audioEngineRef.current.getScopeData()} getProbedData={(name) => audioEngineRef.current.getProbedStates()[name] || null} probes={activeProbes} />
-              <div style={{ height: '150px', marginTop: '16px' }}>
+            <div className="scope-section">
+              <div style={{ height: '250px', flexShrink: 0 }}>
+                <ScopeView getScopeData={() => audioEngineRef.current.getScopeData()} getProbedData={(name) => audioEngineRef.current.getProbedStates()[name] || null} probes={activeProbes} />
+              </div>
+              <div style={{ height: '180px', flexShrink: 0, marginTop: '8px' }}>
                 <SpectrumView 
                   getSpectrumData={() => audioEngineRef.current.getSpectrumData()} 
                   getPeakFrequencies={(count) => audioEngineRef.current.getPeakFrequencies(count)} 
                 />
+              </div>
+              <div style={{ flexShrink: 0, marginTop: '8px' }}>
+                <StatsView getDSPStats={() => audioEngineRef.current.getDSPStats()} />
               </div>
             </div>
             <div className="llm-section">
@@ -1298,7 +1304,7 @@ const App: React.FC = () => {
                     ))}
                   </div>
                 </div>
-              ) : (
+              ) : showInspector ? (
                 <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                   <div style={{ flex: 1, minHeight: 0 }}>
                     <StateInspector onStateUpdate={(cb) => audioEngineRef.current.onStateUpdate(cb)} onProbe={toggleProbe} onSetState={(path, val) => audioEngineRef.current.setState(path, val)} activeProbes={activeProbes} />
@@ -1309,6 +1315,10 @@ const App: React.FC = () => {
                       <MultiScopeView probes={activeProbes} onStateUpdate={(cb) => audioEngineRef.current.onStateUpdate(cb)} />
                     </div>
                   )}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#333', fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.5px' }}>
+                  Use sidebar to open Inspector or History
                 </div>
               )}
             </div>

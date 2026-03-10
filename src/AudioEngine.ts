@@ -34,6 +34,7 @@ export class AudioEngine {
   private scopeBufferL: Float32Array;
   private scopeBufferR: Float32Array;
   private spectrumBuffer: Uint8Array;
+  private floatSpectrumBuffer: Float32Array;
   private isPlaying = false;
   private liveState: Record<string, any> = {};
   private telemetryHistory: Record<string, any>[] = [];
@@ -59,6 +60,7 @@ export class AudioEngine {
     this.scopeBufferL = new Float32Array(8192);
     this.scopeBufferR = new Float32Array(8192);
     this.spectrumBuffer = new Uint8Array(4096);
+    this.floatSpectrumBuffer = new Float32Array(4096);
   }
 
   public onStateUpdate(callback: (state: Record<string, any>, probes: Record<string, number[]>) => void) {
@@ -432,6 +434,117 @@ export class AudioEngine {
       peak_level_db: peakDb.toFixed(2) + " dBFS",
       fundamental_hz: Math.round(maxBin * this.audioContext.sampleRate / this.analyserL.fftSize)
     };
+  }
+
+  public getDSPStats(): Record<string, string | number> {
+    const stats: Record<string, string | number> = {};
+
+    if (!this.analyserL || !this.audioContext) return stats;
+
+    // --- Time-domain stats ---
+    this.analyserL.getFloatTimeDomainData(this.scopeBufferL as any);
+    const buf = this.scopeBufferL;
+    const len = buf.length;
+
+    let sum = 0, sumSq = 0, peak = 0;
+    for (let i = 0; i < len; i++) {
+      const s = buf[i];
+      sum += s;
+      sumSq += s * s;
+      const abs = Math.abs(s);
+      if (abs > peak) peak = abs;
+    }
+
+    const dc = sum / len;
+    const rms = Math.sqrt(sumSq / len);
+    const rmsDb = rms > 1e-10 ? 20 * Math.log10(rms) : -Infinity;
+    const peakDb = peak > 1e-10 ? 20 * Math.log10(peak) : -Infinity;
+    const crest = rms > 1e-10 ? peak / rms : 0;
+    const crestDb = crest > 1.0 ? 20 * Math.log10(crest) : 0;
+
+    stats['RMS'] = rmsDb > -100 ? rmsDb.toFixed(1) + ' dBFS' : '—';
+    stats['Peak'] = peakDb > -100 ? peakDb.toFixed(1) + ' dBFS' : '—';
+    stats['Crest'] = crest > 1.0 ? crestDb.toFixed(1) + ' dB' : '—';
+    stats['DC'] = Math.abs(dc) > 1e-5 ? (dc * 1000).toFixed(2) + ' m' : '~0';
+
+    // --- Frequency-domain stats using FLOAT data (unclamped dB) ---
+    const fftSize = this.analyserL.fftSize;
+    const sampleRate = this.audioContext.sampleRate;
+    const binFreq = sampleRate / fftSize;
+    const binCount = this.analyserL.frequencyBinCount;
+
+    this.analyserL.getFloatFrequencyData(this.floatSpectrumBuffer as any);
+    const fBins = this.floatSpectrumBuffer;
+
+    // Convert dB to linear power
+    const powers = new Float64Array(binCount);
+    let totalPower = 0;
+    let maxPower = 0;
+    let fundamentalBin = -1;
+
+    // Find fundamental: strongest bin between 30 Hz and 8 kHz
+    const startBin = Math.max(1, Math.floor(30 / binFreq));
+    const endBin = Math.min(binCount, Math.floor(8000 / binFreq));
+
+    for (let i = 0; i < binCount; i++) {
+      const db = fBins[i];
+      if (db < -150) { powers[i] = 0; continue; } // below noise floor
+      const p = Math.pow(10, db / 10);
+      powers[i] = p;
+      totalPower += p;
+      if (i >= startBin && i < endBin && p > maxPower) {
+        maxPower = p;
+        fundamentalBin = i;
+      }
+    }
+
+    if (totalPower < 1e-15 || fundamentalBin < 0) {
+      stats['SNR'] = '—';
+      stats['THD+N'] = '—';
+      stats['F0'] = '—';
+    } else {
+      const fundamentalHz = Math.round(fundamentalBin * binFreq);
+
+      // Sum power in a ±3 bin window around fundamental and its harmonics
+      const windowHalf = 3;
+      let signalPower = 0;
+      let fundamentalPower = 0;
+
+      for (let h = 1; h <= 8; h++) {
+        const targetBin = Math.round(fundamentalBin * h);
+        if (targetBin >= binCount) break;
+
+        const lo = Math.max(0, targetBin - windowHalf);
+        const hi = Math.min(binCount - 1, targetBin + windowHalf);
+        let windowPower = 0;
+        for (let b = lo; b <= hi; b++) windowPower += powers[b];
+
+        signalPower += windowPower;
+        if (h === 1) fundamentalPower = windowPower;
+      }
+
+      const noisePower = Math.max(0, totalPower - signalPower);
+      const harmonicDistortion = Math.max(0, signalPower - fundamentalPower);
+
+      // SNR = fundamental power / noise power
+      const snr = fundamentalPower > 1e-15 && noisePower > 1e-15
+        ? 10 * Math.log10(fundamentalPower / noisePower)
+        : fundamentalPower > 1e-15 ? 120 : 0;
+
+      // THD+N = (harmonic distortion + noise) / fundamental power
+      const thdnRatio = fundamentalPower > 1e-15
+        ? (harmonicDistortion + noisePower) / fundamentalPower
+        : 0;
+      const thdnPercent = thdnRatio * 100;
+
+      stats['SNR'] = snr > 0.1 ? snr.toFixed(1) + ' dB' : '—';
+      stats['THD+N'] = thdnPercent < 999 ? thdnPercent.toFixed(2) + '%' : '—';
+      stats['F0'] = fundamentalHz + ' Hz';
+    }
+
+    stats['Fs'] = (sampleRate / 1000).toFixed(1) + ' kHz';
+
+    return stats;
   }
 
   public sendNoteOn(note: number, velocity: number, channel: number = 0) {

@@ -294,11 +294,16 @@
 .scope-section {
   display: flex;
   flex-direction: column;
-  flex: 0 0 520px;
-  padding: 20px 10px 40px;
+  flex: 0 1 auto;
+  max-height: 60vh;
+  min-height: 200px;
+  padding: 12px 10px 16px;
   border-bottom: 1px solid var(--border-subtle);
   background: #000;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #333 transparent;
 }
 .llm-section { 
   flex: 1; 
