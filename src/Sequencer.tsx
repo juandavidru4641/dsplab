@@ -222,6 +222,8 @@ const Sequencer: React.FC<SequencerProps> = ({
   ccTracks, setCCTracks, ccLabels,
   onSequencerStep, updateSequencer 
 }) => {
+  const [genPoly, setGenPoly] = useState(false);
+  const [genScale, setGenScale] = useState<'minor' | 'major' | 'pentatonic'>('pentatonic');
 
 
   // Sync state to AudioWorklet
@@ -296,23 +298,39 @@ const Sequencer: React.FC<SequencerProps> = ({
        }
        setDrumTracks(next);
     } else {
+      const SCALES = {
+        pentatonic: [0, 2, 4, 7, 9],
+        minor: [0, 2, 3, 5, 7, 8, 10],
+        major: [0, 2, 4, 5, 7, 9, 11]
+      };
+      
       const root = 36 + Math.floor(Math.random() * 12);
-      const PENTATONIC_SCALE = [0, 3, 5, 7, 10];
+      const scale = SCALES[genScale];
+      
       setSteps(prev => prev.map((step, idx) => {
         if (idx >= length) return step;
+        
+        // Rhythmic pattern logic
+        const density = 0.5;
+        const isActive = Math.random() < density;
+        
+        if (!isActive) return { ...step, active: false, notes: [] };
+
         const notes: number[] = [];
-        const count = Math.random() > 0.8 ? 3 : (Math.random() > 0.6 ? 2 : 1);
+        const count = genPoly ? (Math.random() > 0.7 ? 3 : (Math.random() > 0.4 ? 2 : 1)) : 1;
+        
         for(let i=0; i<count; i++) {
-          const scaleDegree = PENTATONIC_SCALE[Math.floor(Math.random() * PENTATONIC_SCALE.length)];
-          const octaveShift = Math.floor(Math.random() * 2) * 12;
-          const n = root + scaleDegree + octaveShift;
+          const degree = scale[Math.floor(Math.random() * scale.length)];
+          const octave = Math.floor(Math.random() * 2) * 12;
+          const n = root + degree + octave;
           if (!notes.includes(n)) notes.push(n);
         }
+
         return {
-          active: Math.random() > 0.4,
+          active: true,
           notes,
-          accent: Math.random() > 0.7,
-          slide: Math.random() > 0.8
+          accent: Math.random() > 0.8,
+          slide: Math.random() > 0.9
         };
       }));
     }
@@ -322,7 +340,8 @@ const Sequencer: React.FC<SequencerProps> = ({
     if (mode === 'drum') {
       const next = drumTracks.map(t => ({...t, steps: t.steps.map((st:any) => ({...st, active: false, accent: false, slide: false}))}));
       setDrumTracks(next);
-      setSteps(steps.map(s => ({ ...s, active: false, accent: false, slide: false, notes: [] })));
+    } else {
+      setSteps(prev => prev.map(s => ({ ...s, active: false, accent: false, slide: false, notes: [] })));
     }
   }
 
@@ -357,16 +376,39 @@ const Sequencer: React.FC<SequencerProps> = ({
           {isPlaying ? 'STOP' : 'RUN'}
         </button>
 
-        <button 
-          onClick={generateMelody}
-          style={{ 
-            background: '#161b22', border: '1px solid #30363d', borderRadius: '4px', padding: '4px 12px', 
-            color: '#7ec8ff', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer', letterSpacing: '0.5px'
-          }}
-          title="Generate random sequence"
-        >
-          GEN
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <button 
+            onClick={generateMelody}
+            style={{ 
+              background: '#161b22', border: '1px solid #30363d', borderRadius: '4px 0 0 4px', padding: '4px 12px', 
+              color: '#7ec8ff', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer', letterSpacing: '0.5px'
+            }}
+            title="Generate random sequence"
+          >
+            GEN
+          </button>
+          <button 
+            onClick={() => setGenPoly(!genPoly)}
+            style={{ 
+              background: genPoly ? '#1a3333' : '#161b22', border: '1px solid #30363d', borderLeft: 'none', borderRadius: '0 4px 4px 0', padding: '4px 8px', 
+              color: genPoly ? '#00ffcc' : '#555', fontSize: '8px', fontWeight: 'bold', cursor: 'pointer', letterSpacing: '0.5px'
+            }}
+            title="Toggle Polyphonic Generation"
+          >
+            POLY
+          </button>
+          {mode === 'melody' && (
+            <select 
+              value={genScale} 
+              onChange={(e) => setGenScale(e.target.value as any)}
+              style={{ background: '#161b22', border: '1px solid #30363d', color: '#888', borderRadius: '4px', fontSize: '9px', padding: '3px 6px', outline: 'none' }}
+            >
+              <option value="pentatonic">Pentatonic</option>
+              <option value="minor">Minor</option>
+              <option value="major">Major</option>
+            </select>
+          )}
+        </div>
 
         <button 
           onClick={clearPattern}
