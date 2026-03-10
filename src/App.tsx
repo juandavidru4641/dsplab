@@ -434,6 +434,15 @@ CORE LANGUAGE SPECS:
 
 V1 SPECIFIC FEATURES (V1 only):
 - Pattern Matching: 'match(x) { val -> ... }'.
+  EXAMPLE for controlChange:
+  fun controlChange(c:int, v:int, ch:int) {
+    val vn = real(v) / 127.0;
+    match(c) {
+      30 -> vib_rate = vn;
+      31 -> vib_depth = vn;
+      38 -> filter_cut = vn;
+    }
+  }
 - For Loops: 'iter(i, size) { ... }'.
 - Generic Arrays: 'array(type, size)'.
 - Instance Arrays: 'instances[i]:func()'.

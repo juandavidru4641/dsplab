@@ -506,8 +506,14 @@ const LLMPane = forwardRef<LLMPaneHandle, LLMPaneProps>(({
       },
       {
         name: "get_live_telemetry",
-        description: "Retrieves the current values of all internal Vult variables (live telemetry).",
-        parameters: { type: "OBJECT", properties: {} }
+        description: "Retrieves current values of internal Vult variables. If the state is large, use the 'filter' parameter to find specific modules or variables. Results are capped at 100 by default to ensure performance.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            filter: { type: "STRING", description: "Optional regex pattern to filter keys (e.g. 'osc1' or 'filter')." },
+            limit: { type: "NUMBER", description: "Max number of variables to return (default 100)." }
+          }
+        }
       },
       {
         name: "get_state",
@@ -1422,13 +1428,46 @@ const LLMPane = forwardRef<LLMPaneHandle, LLMPaneProps>(({
               addDisplayMsg('system', `[RESEARCH] Browsing preset library`);
               result = { presets: getPresets() };
             } else if (name === 'get_live_telemetry') {
-              addDisplayMsg('system', `[RESEARCH] Inspecting internal memory states`);
-              result = { telemetry: getTelemetry() };
+              const { filter, limit = 100 } = fc.args;
+              addDisplayMsg('system', `[RESEARCH] Inspecting internal memory states${filter ? ` (filter: ${filter})` : ''}`);
+              const fullTelemetry = getTelemetry();
+              let keys = Object.keys(fullTelemetry);
+              
+              if (filter) {
+                try {
+                  const regex = new RegExp(filter, 'i');
+                  keys = keys.filter(k => regex.test(k));
+                } catch(e) {}
+              }
+              
+              const totalFound = keys.length;
+              const resultKeys = keys.slice(0, limit);
+              const telemetry: Record<string, any> = {};
+              resultKeys.forEach(k => telemetry[k] = fullTelemetry[k]);
+              
+              result = { 
+                telemetry, 
+                count: resultKeys.length, 
+                total: totalFound,
+                message: totalFound > limit ? `Truncated to ${limit} items. Use 'filter' to see more specific keys.` : undefined
+              };
             } else if (name === 'get_state') {
               const key = fc.args.key;
+              addDisplayMsg('system', `[RESEARCH] Reading specific state: ${key}`);
               const telemetry = getTelemetry();
-              addDisplayMsg('system', `[RESEARCH] Reading state: ${key}`);
-              result = { [key]: telemetry[key] !== undefined ? telemetry[key] : "Variable not found." };
+              if (telemetry[key] !== undefined) {
+                 result = { [key]: telemetry[key] };
+              } else {
+                 // Try partial match if not found exactly
+                 const matches = Object.keys(telemetry).filter(k => k.includes(key)).slice(0, 10);
+                 if (matches.length > 0) {
+                    const partial: Record<string, any> = {};
+                    matches.forEach(m => partial[m] = telemetry[m]);
+                    result = { error: `Key '${key}' not found exactly. Did you mean one of these?`, suggestions: partial };
+                 } else {
+                    result = { error: `Variable '${key}' not found in telemetry context.` };
+                 }
+              }
             } else if (name === 'get_state_history') {
               const key = fc.args.key;
               const count = Math.min(10, fc.args.count || 5);
@@ -1485,7 +1524,7 @@ const LLMPane = forwardRef<LLMPaneHandle, LLMPaneProps>(({
                     and: "MANDATORY for state-sharing handlers: 'fun process(x) { ... } and noteOn(n,v,c) { ... }'"
                   },
                   v1_exclusive_features: {
-                    pattern_matching: "match(x) { 0 -> A; 1 -> B; _ -> C; }",
+                    pattern_matching: "match(x) { 0 -> A; 1 -> B; _ -> C; } (Best for controlChange)",
                     generic_arrays: "mem buffer: array(real, 1024);",
                     iterators: "iter(i, 8) { set(buf, i, 0.0); }",
                     instances: "instances[i]:osc(f);"
