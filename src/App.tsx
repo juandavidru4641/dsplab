@@ -433,20 +433,15 @@ CORE LANGUAGE SPECS:
 - CC Mapping: CCs 30-41 are automatically available as knobs. Implement logic in 'controlChange' and store in 'mem' variables.
 
 V1 SPECIFIC FEATURES (V1 only):
-- Pattern Matching: 'match(x) { val -> ... }'.
-  EXAMPLE for controlChange:
-  fun controlChange(c:int, v:int, ch:int) {
-    val vn = real(v) / 127.0;
-    match(c) {
-      30 -> vib_rate = vn;
-      31 -> vib_depth = vn;
-      38 -> filter_cut = vn;
-    }
-  }
-- For Loops: 'iter(i, size) { ... }'.
-- Generic Arrays: 'array(type, size)'.
-- Instance Arrays: 'instances[i]:func()'.
-- Enums: 'enum Name { Value1, Value2 }'.
+- Enumerations: 'enum e { One, Two }'.
+- Record Types: 'type point { val x:real; val y:real; }'. Access with 'p.x'.
+- Constants: 'constant pi = 3.14;' (Global allowed).
+- Iter Loops: 'iter(i, count) { ... }' counts from 0 to count-1.
+- Generic Arrays: 'array(real, size)'. Use 'size(data)' for length. 'val x = data[i];'.
+- Instance Arrays: 'mem oscs : array(osc_type, 4);'. Called as 'oscs[i]:osc(f);'. 
+- Pattern Matching: 'match (x) { 0 -> { ... } _ -> { ... } }'. Support tuples: 'match (x, y) { 1, 2 -> ... }'.
+- Strings: 'string' type, literals '"..."', concat '+', 'string(val)', 'length(s)'.
+- Specialization: Parameters prefixed with ' (e.g., ''n : int') are evaluated at compile-time.
 
 LABORATORY WORKFLOW:
 - Read: Use 'get_current_code' for context or 'list_functions'.
@@ -896,21 +891,30 @@ const App: React.FC = () => {
 
   const handleLoadCode = useCallback((newCode: string) => {
     if (!newCode) return;
-    skipNextUpdateRef.current = true;
+    skipNextUpdateRef.current = false; // Reset by default
     setActiveProbes([]);
     audioEngineRef.current.setProbes([]);
     setEditorMarkers([]);
     setDiffMode(false);
     setOriginalCode('');
-    setStatus('Loading...');
-
-    setCode(newCode);
-    localStorage.setItem('vult_session_code', newCode);
     
+    // Determine if we need to skip the next editor update
+    // If the code is identical to what state already has, setCode won't trigger a re-render/effect,
+    // so we must force the editor to reset manually.
+    const isActuallyChangingState = newCode !== code;
+
+    if (!isActuallyChangingState) {
+      vultEditorRef.current?.setValue(newCode);
+    } else {
+      skipNextUpdateRef.current = true;
+      setCode(newCode);
+    }
+    
+    localStorage.setItem('vult_session_code', newCode);
+
     const newCCLabels = parseVultCCs(newCode);
     setCcLabels(newCCLabels);
     
-    // Completely recreate CC Lanes for the new preset
     setSeqCCTracks(Object.keys(newCCLabels).map(ccStr => ({
       cc: parseInt(ccStr),
       steps: Array(128).fill(0)
@@ -919,6 +923,7 @@ const App: React.FC = () => {
     setInputs(parseVultInputs(newCode));
 
     if (isPlaying) {
+      setStatus('Loading...');
       audioEngineRef.current.updateCode(newCode).then(result => {
         if (result.success) setStatus('Running');
         else {
@@ -928,8 +933,15 @@ const App: React.FC = () => {
       });
     } else {
       setStatus('Idle');
+      // Even if not playing, check syntax to show markers
+      audioEngineRef.current.compileCheck(newCode).then(result => {
+        if (!result.success) {
+          setStatus('Compile Error');
+          setEditorMarkers(parseVultError(result));
+        }
+      });
     }
-  }, [isPlaying, parseVultCCs, parseVultInputs]);
+  }, [isPlaying, code, parseVultCCs, parseVultInputs]);
 
   const loadPreset = (name: string) => {
     const presetCode = PRESETS[name];

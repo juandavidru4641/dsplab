@@ -5,6 +5,8 @@ import type { Monaco } from '@monaco-editor/react';
 export interface VultEditorHandle {
   /** Insert text at the current cursor position. */
   insertAtCursor: (text: string) => void;
+  /** Forcefully set the editor value, bypassing normal prop-sync checks. */
+  setValue: (value: string) => void;
 }
 
 interface VultEditorProps {
@@ -76,6 +78,12 @@ const VultEditor = forwardRef<VultEditorHandle, VultEditorProps>(({
       editor.revealPositionInCenter({ lineNumber: lineCount, column: 1 });
       editor.focus();
     },
+    setValue(val: string) {
+      if (editorRef.current) {
+        editorRef.current.setValue(val);
+        lastCodeRef.current = val;
+      }
+    }
   }));
 
   useEffect(() => {

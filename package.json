@@ -15,11 +15,16 @@
   "dependencies": {
     "@google/genai": "^1.44.0",
     "@monaco-editor/react": "^4.7.0",
+    "@types/prismjs": "^1.26.6",
+    "framer-motion": "^12.35.2",
     "ltrim": "^1.0.1",
     "lucide-react": "^0.577.0",
     "monaco-editor": "^0.55.1",
+    "prismjs": "^1.30.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "vult": "0.4.15",
     "webmidi": "^3.1.14"
   },

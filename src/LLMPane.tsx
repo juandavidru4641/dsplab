@@ -1,5 +1,14 @@
-import { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
-import { Send, Loader2, Settings, Activity, StopCircle, ChevronDown, ChevronRight, Sparkles, Maximize2 } from 'lucide-react';
+import { useState, useEffect, useRef, useImperativeHandle, forwardRef, useMemo } from 'react';
+import { Send, Loader2, Settings, Activity, StopCircle, ChevronDown, ChevronRight, Maximize2, Trash2, Copy, Check, Brain, Terminal, MessageSquare, Zap, BookOpen, Sparkles } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import Prism from 'prismjs';
+import 'prismjs/themes/prism-tomorrow.css';
+import 'prismjs/components/prism-clike';
+import 'prismjs/components/prism-c';
+import 'prismjs/components/prism-cpp';
+import 'prismjs/components/prism-javascript';
 
 export interface LLMPaneHandle {
   /** Programmatically send a message to the agent, as if the user typed it. */
@@ -27,6 +36,52 @@ interface LLMPaneProps {
   getAudioMetrics: () => Record<string, number>;
   systemPrompt: string;
 }
+
+const CodeBlock = ({ code, language, onApply }: { code: string, language?: string, onApply?: (code: string) => void }) => {
+  const [copied, setCopied] = useState(false);
+  const [applied, setApplied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleApply = () => {
+    if (onApply) {
+      onApply(code);
+      setApplied(true);
+      setTimeout(() => setApplied(false), 2000);
+    }
+  };
+
+  const highlighted = useMemo(() => {
+    const lang = language || 'vult';
+    const prismLang = Prism.languages[lang] || Prism.languages.clike;
+    return Prism.highlight(code, prismLang, lang);
+  }, [code, language]);
+
+  return (
+    <div style={{ position: 'relative', margin: '8px 0', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', background: '#111' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 8px', background: 'rgba(255,255,255,0.05)', fontSize: '10px', color: '#888' }}>
+        <span style={{ fontFamily: 'monospace', textTransform: 'uppercase' }}>{language || 'vult'}</span>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button onClick={handleCopy} style={{ background: 'transparent', border: 'none', color: copied ? '#00ff00' : '#888', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px' }}>
+            {copied ? <Check size={12} /> : <Copy size={12} />} {copied ? 'COPIED' : 'COPY'}
+          </button>
+          {onApply && (
+            <button onClick={handleApply} style={{ background: 'transparent', border: 'none', color: applied ? '#00ff00' : 'var(--accent-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 'bold' }}>
+              {applied ? <Check size={12} /> : <Zap size={12} />} {applied ? 'APPLIED' : 'APPLY'}
+            </button>
+          )}
+        </div>
+      </div>
+      <pre style={{ margin: 0, padding: '12px', fontSize: '11px', overflowX: 'auto', background: 'transparent' }}>
+        <code dangerouslySetInnerHTML={{ __html: highlighted }} />
+      </pre>
+    </div>
+  );
+};
 
 type MessagePart = { 
   text?: string; 
@@ -298,11 +353,20 @@ const LLMPane = forwardRef<LLMPaneHandle, LLMPaneProps>(({
       return [...prev, { role, content: formattedContent, id, isStreaming, choices }];
     });
     // Auto-expand if it's a thought and streaming
-    if (role === 'thought' && isStreaming) {
+    if (role === 'thought') {
       setExpandedThoughts(prev => new Set(prev).add(id));
     }
     return id;
   };
+
+  const [activeTab, setActiveTab] = useState<'chat' | 'memory' | 'info'>('chat');
+
+  const suggestions = [
+    { label: "High-end Reverb", prompt: "Implement a high-quality stereo FDN or Schroeder reverb. Use multiple allpass and comb filters." },
+    { label: "Analog VCO", prompt: "Create a stable, anti-aliased oscillator with Saw, Square, and Sine outputs. Use PolyBLEP if needed." },
+    { label: "Moog Ladder", prompt: "Implement a classic 4-pole Moog ladder resonant low-pass filter with non-linear saturation." },
+    { label: "Polyphonic Kit", prompt: "Refactor the current code to support 8-voice polyphony using an array of instances and a voice allocator." }
+  ];
 
   const finalizeStreamingMsg = (id: string) => {
     setDisplayMessages(prev => {
@@ -1515,23 +1579,28 @@ const LLMPane = forwardRef<LLMPaneHandle, LLMPaneProps>(({
               addDisplayMsg('system', `[RESEARCH] Consulting Vult technical reference`);
               result = {
                 vult_syntax_guide: {
-                  overview: "Vult is a transcompiler language for high-performance DSP. (V0: Stable classic, V1: Modern strictly typed).",
+                  overview: "Vult is a transcompiler language for high-performance DSP. (V0: Stable classic, V1: Modern beta).",
                   declarations: {
                     mem: "Persistent state inside functions: 'mem x = 0.0;'. Global mem is INVALID.",
                     val: "Immutable local: 'val x = 1.0;'",
                     var: "Mutable local: 'var x = 0.0;'",
+                    constant: "Global constant: 'constant pi = 3.14;' (V1 only)",
                     fun: "Function: 'fun f(x) { return x; }'",
-                    and: "MANDATORY for state-sharing handlers: 'fun process(x) { ... } and noteOn(n,v,c) { ... }'"
+                    and: "MANDATORY for state-sharing handlers: 'fun process(x) { ... } and noteOn(n,v,c) { ... }'",
+                    enum: "Enumeration: 'enum Color { Red, Green, Blue }' (V1 only)",
+                    record: "Record/Type: 'type point { val x:real; val y:real; }' (V1 only)"
                   },
                   v1_exclusive_features: {
-                    pattern_matching: "match(x) { 0 -> A; 1 -> B; _ -> C; } (Best for controlChange)",
-                    generic_arrays: "mem buffer: array(real, 1024);",
-                    iterators: "iter(i, 8) { set(buf, i, 0.0); }",
-                    instances: "instances[i]:osc(f);"
+                    pattern_matching: "match (x, y) { 1, 2 -> { f(); } _ -> { g(); } } (Supports tuples and wildcards)",
+                    generic_arrays: "Declaration: 'mem buffer : array(real, 1024);' or param: 'fun f(a:array(real))'. Use 'size(a)' for length.",
+                    iterators: "Loop: 'iter(i, count) { ... }' counts 0 to count-1.",
+                    instance_arrays: "Array of stateful workers: 'mem oscs : array(osc_type, 4);' -> Call as 'oscs[i]:osc(f);'. Note: type name is 'funcname_type'.",
+                    strings: "Type 'string', literals '\"hello\"', concat with '+', 'string(val)' conversion, 'length(s)' for size.",
+                    specialization: "Compile-time params: 'fun add('n : int, x) { return n + x; }'. 'n' must be a literal at call site."
                   },
                   statement_rules: "STRICT: All statements MUST be assignments ('a=b;') or discards ('_=f();'). Standalone calls or expressions will FAIL.",
                   logic_operators: "C-style mandatory: &&, ||, ! (Do NOT use 'and', 'or', 'not' as keywords).",
-                  math: "abs, exp, log, log10, sin, cos, tan, tanh, sqrt, pow, floor, ceil, clip(x, low, high)"
+                  math: "abs, exp, log, log10, sin, cos, tan, tanh, sqrt, pow, floor, ceil, clip(x, low, high), string(x), size(array), length(string)"
                 },
                 next_step: "Reference consulted. Ensure your patches follow version-specific syntax and PROCEED IMMEDIATELY."
               };
@@ -1763,218 +1832,371 @@ const LLMPane = forwardRef<LLMPaneHandle, LLMPaneProps>(({
 
   if (isMinimized) {
     return (
-      <div 
+      <motion.div 
+        layoutId="llm-widget"
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
         style={{ 
           position: 'fixed', bottom: '20px', right: '20px', 
-          background: 'rgba(26, 26, 26, 0.85)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.1)', 
+          background: 'rgba(26, 26, 26, 0.9)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.1)', 
           borderRadius: '24px', padding: '10px 20px', 
           display: 'flex', alignItems: 'center', gap: '10px', 
           cursor: 'pointer', zIndex: 9999, boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-          transition: 'all 0.2s ease-in-out'
         }}
         onClick={() => setIsMinimized(false)}
-        title="Restore DSP Agent"
+        whileHover={{ scale: 1.05, background: 'rgba(40, 40, 40, 0.9)' }}
       >
         <Maximize2 size={14} color="#888" />
-        <Activity size={16} color={isLoading ? "#ff0000" : "#00ff00"} className={isLoading ? "animate-spin" : ""} />
-        <span style={{ color: '#fff', fontWeight: 'bold', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{status || "DSP Agent"}</span>
-      </div>
+        <Activity size={16} color={isLoading ? "var(--accent-primary)" : "#00ff00"} className={isLoading ? "animate-pulse" : ""} />
+        <span style={{ color: '#fff', fontWeight: 'bold', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px' }}>{status || "DSP Agent"}</span>
+      </motion.div>
     );
   }
 
   return (
-    <div style={{ position: 'fixed', top: `${widgetState.y}px`, left: `${widgetState.x}px`, width: `${widgetState.width}px`, height: `${widgetState.height}px`, display: 'flex', flexDirection: 'column', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', background: 'rgba(30,30,30,0.85)', backdropFilter: 'blur(12px)', zIndex: 9999, boxShadow: '0 12px 40px rgba(0,0,0,0.6)', overflow: 'hidden' }}>
+    <motion.div 
+      layoutId="llm-widget"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      style={{ 
+        position: 'fixed', top: `${widgetState.y}px`, left: `${widgetState.x}px`, 
+        width: `${widgetState.width}px`, height: `${widgetState.height}px`, 
+        display: 'flex', flexDirection: 'column', 
+        border: '1px solid rgba(255,255,255,0.15)', borderRadius: '16px', 
+        background: 'rgba(24, 24, 27, 0.85)', backdropFilter: 'blur(16px)', 
+        zIndex: 9999, boxShadow: '0 12px 48px rgba(0,0,0,0.7)', 
+        overflow: 'hidden' 
+      }}
+    >
+      {/* HEADER */}
       <div 
         onMouseDown={handleDragStart}
-        style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.2)', cursor: 'grab' }}
+        style={{ 
+          padding: '10px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', 
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+          background: 'rgba(0,0,0,0.3)', cursor: 'grab' 
+        }}
       >
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <button onClick={() => setIsMinimized(true)} style={{ background: 'transparent', border: 'none', color: '#888', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }} title="Minimize">
-            <ChevronDown size={20} />
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button onClick={() => setIsMinimized(true)} style={{ background: 'transparent', border: 'none', color: '#666', cursor: 'pointer', padding: '4px' }}>
+            <ChevronDown size={18} />
           </button>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Activity size={14} color={isLoading ? "#ff0000" : "#666"} className={isLoading ? "animate-spin" : ""} />
-              <span style={{ fontWeight: 'bold', fontSize: '12px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '1px' }}>DSP Agent</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Zap size={12} color="var(--accent-primary)" />
+              <span style={{ fontWeight: 800, fontSize: '11px', color: '#fff', textTransform: 'uppercase', letterSpacing: '1.5px' }}>DSP AGENT</span>
             </div>
-            <div style={{ fontSize: '10px', color: '#00ff00', marginTop: '2px', fontWeight: 'bold', fontFamily: 'monospace', textShadow: '0 0 5px rgba(0,255,0,0.3)' }}>
-              TOKENS: {tokens.total.toLocaleString()} {currentTurn > 0 && `| TURN: ${currentTurn}/${provider === 'gemini' ? '50' : '30'} (${formatTime(elapsedTurn)})`} | SESSION: {formatTime(elapsedSession)}
+            <div style={{ fontSize: '9px', color: '#666', marginTop: '1px', fontWeight: 'bold', fontFamily: 'monospace' }}>
+              PRO: {tokens.total.toLocaleString()} TOKENS | {currentTurn > 0 && `TURN: ${currentTurn} (${formatTime(elapsedTurn)}) | `} SES: {formatTime(elapsedSession)}
             </div>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        
+        <div style={{ display: 'flex', gap: '4px' }}>
+          <button 
+            onClick={() => setActiveTab('chat')}
+            style={{ padding: '6px', borderRadius: '6px', background: activeTab === 'chat' ? 'rgba(255,255,255,0.05)' : 'transparent', border: 'none', color: activeTab === 'chat' ? 'var(--accent-primary)' : '#666', cursor: 'pointer' }}
+          >
+            <MessageSquare size={16} />
+          </button>
+          <button 
+            onClick={() => setActiveTab('memory')}
+            style={{ padding: '6px', borderRadius: '6px', background: activeTab === 'memory' ? 'rgba(255,255,255,0.05)' : 'transparent', border: 'none', color: activeTab === 'memory' ? 'var(--accent-primary)' : '#666', cursor: 'pointer' }}
+          >
+            <Brain size={16} />
+          </button>
+          <button 
+            onClick={() => setActiveTab('info')}
+            style={{ padding: '6px', borderRadius: '6px', background: activeTab === 'info' ? 'rgba(255,255,255,0.05)' : 'transparent', border: 'none', color: activeTab === 'info' ? 'var(--accent-primary)' : '#666', cursor: 'pointer' }}
+          >
+            <BookOpen size={16} />
+          </button>
           <button 
             onClick={handleFeelCurious} 
             disabled={isLoading || isInspirationLoading}
-            style={{ background: 'transparent', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', padding: 0 }}
+            style={{ background: 'transparent', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', padding: '6px' }}
             title="I Feel Curious (Get Inspiration)"
           >
             <Sparkles size={16} />
           </button>
-          <button onClick={() => setShowSettings(!showSettings)} style={{ background: 'transparent', border: 'none', color: (provider === 'gemini' && apiKey) || provider === 'openai' ? '#00ff00' : '#888', cursor: 'pointer', padding: 0 }} title="Settings">
+          <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.1)', margin: '0 4px' }} />
+          <button onClick={() => setShowSettings(!showSettings)} style={{ background: 'transparent', border: 'none', color: showSettings ? 'var(--accent-primary)' : '#666', cursor: 'pointer', padding: '6px' }}>
             <Settings size={16} />
           </button>
         </div>
       </div>
-      
-      {showSettings && (
-        <div style={{ padding: '12px', background: 'var(--bg-surface)', borderBottom: '1px solid #333', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <label style={{ fontSize: '9px', color: '#888', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <input type="radio" checked={provider === 'gemini'} onChange={() => handleSaveSettings('gemini', endpoint, apiKey, modelName)} />
-              GEMINI
-            </label>
-            <label style={{ fontSize: '9px', color: '#888', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <input type="radio" checked={provider === 'anthropic'} onChange={() => handleSaveSettings('anthropic', endpoint, apiKey, modelName)} />
-              CLAUDE
-            </label>
-            <label style={{ fontSize: '9px', color: '#888', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <input type="radio" checked={provider === 'openai'} onChange={() => handleSaveSettings('openai', endpoint, apiKey, modelName)} />
-              OAI-COMPAT
-            </label>
-          </div>
-          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', margin: '4px 0' }}>
-            <button onClick={() => handleSaveSettings('gemini', '', apiKey, 'gemini-2.5-flash')} style={{ fontSize: '9px', padding: '2px 6px', background: '#222', color: '#aaa', border: '1px solid #444', borderRadius: '4px', cursor: 'pointer' }}>Gemini</button>
-            <button onClick={() => handleSaveSettings('anthropic', 'https://api.anthropic.com/v1/messages', apiKey, 'claude-3-7-sonnet-20250219')} style={{ fontSize: '9px', padding: '2px 6px', background: '#222', color: '#aaa', border: '1px solid #444', borderRadius: '4px', cursor: 'pointer' }}>Claude 3.7</button>
-            <button onClick={() => handleSaveSettings('openai', 'https://api.openai.com/v1/chat/completions', apiKey, 'gpt-4o')} style={{ fontSize: '9px', padding: '2px 6px', background: '#222', color: '#aaa', border: '1px solid #444', borderRadius: '4px', cursor: 'pointer' }}>OpenAI (gpt-4o)</button>
-            <button onClick={() => handleSaveSettings('openai', 'https://api.groq.com/openai/v1/chat/completions', apiKey, 'llama3-70b-8192')} style={{ fontSize: '9px', padding: '2px 6px', background: '#222', color: '#aaa', border: '1px solid #444', borderRadius: '4px', cursor: 'pointer' }}>Groq</button>
-            <button onClick={() => handleSaveSettings('openai', 'https://api.deepseek.com/chat/completions', apiKey, 'deepseek-chat')} style={{ fontSize: '9px', padding: '2px 6px', background: '#222', color: '#aaa', border: '1px solid #444', borderRadius: '4px', cursor: 'pointer' }}>DeepSeek</button>
-            <button onClick={() => handleSaveSettings('openai', 'http://localhost:11434/v1/chat/completions', apiKey, 'llama3')} style={{ fontSize: '9px', padding: '2px 6px', background: '#222', color: '#aaa', border: '1px solid #444', borderRadius: '4px', cursor: 'pointer' }}>Local (Ollama)</button>
-            <button onClick={() => handleSaveSettings('openai', 'https://openrouter.ai/api/v1/chat/completions', apiKey, 'anthropic/claude-3.5-sonnet')} style={{ fontSize: '9px', padding: '2px 6px', background: '#222', color: '#aaa', border: '1px solid #444', borderRadius: '4px', cursor: 'pointer' }}>OpenRouter</button>
-          </div>
-          {(provider === 'openai' || provider === 'anthropic') && (
-            <input type="text" placeholder="Endpoint URL..." value={endpoint} onChange={(e) => handleSaveSettings(provider, e.target.value, apiKey, modelName)} style={{ background: '#111', border: '1px solid #444', color: '#fff', padding: '6px', borderRadius: '4px', fontSize: '11px', outline: 'none' }} />
-          )}
-          <input type="password" placeholder="API Key..." value={apiKey} onChange={(e) => handleSaveSettings(provider, endpoint, e.target.value, modelName)} style={{ background: '#111', border: '1px solid #444', color: '#fff', padding: '6px', borderRadius: '4px', fontSize: '11px', outline: 'none' }} />
-          <input type="text" placeholder="Model ID..." value={modelName} onChange={(e) => handleSaveSettings(provider, endpoint, apiKey, e.target.value)} style={{ background: '#111', border: '1px solid #444', color: '#fff', padding: '6px', borderRadius: '4px', fontSize: '11px', outline: 'none' }} />
-          <button 
-            onClick={() => { setTokens({ prompt: 0, completion: 0, total: 0 }); localStorage.removeItem('llm_tokens'); }}
-            style={{ fontSize: '9px', background: '#444', color: '#fff', border: 'none', padding: '4px', borderRadius: '2px', cursor: 'pointer' }}
-          >
-            RESET TOKEN COUNTER
-          </button>
-          <button 
-            onClick={handleClearChat}
-            style={{ fontSize: '9px', background: '#441111', color: '#ff4444', border: '1px solid #ff4444', padding: '4px', borderRadius: '2px', cursor: 'pointer', fontWeight: 'bold' }}
-          >
-            CLEAR CHAT HISTORY
-          </button>
-        </div>
-      )}
 
-      <div style={{ height: '4px', width: '100%', background: '#000', position: 'relative', overflow: 'hidden', borderBottom: '1px solid #333' }}>
-        {(isLoading || isInspirationLoading) && <div className="agent-scanner" />}
-      </div>
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: '16px', scrollBehavior: 'smooth' }}>
-        {displayMessages.map((m) => (
-          <div key={m.id} style={{ 
-            alignSelf: m.role === 'user' ? 'flex-end' : (m.role === 'system' || m.role === 'thought' ? 'center' : 'flex-start'),
-            width: m.role === 'system' || m.role === 'thought' ? '100%' : 'auto',
-            background: m.role === 'user' ? 'rgba(0, 122, 204, 0.4)' : (m.role === 'assistant' ? 'rgba(255, 255, 255, 0.05)' : (m.role === 'system' ? 'rgba(0,0,0,0.3)' : 'transparent')),
-            borderLeft: m.role === 'system' ? '2px solid rgba(var(--accent-primary-rgb),0.5)' : (m.role === 'thought' ? '2px solid rgba(255,255,255,0.1)' : 'none'),
-            color: m.role === 'system' ? '#aaa' : (m.role === 'thought' ? '#777' : '#fff'),
-            padding: m.role === 'system' || m.role === 'thought' ? '6px 12px' : '10px 14px',
-            borderRadius: m.role === 'system' || m.role === 'thought' ? '6px' : '16px',
-            maxWidth: m.role === 'system' || m.role === 'thought' ? '100%' : '85%',
-            fontSize: m.role === 'system' || m.role === 'thought' ? '11px' : '13px',
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word',
-            fontFamily: m.role === 'system' || m.role === 'thought' ? 'monospace' : 'inherit',
-            boxShadow: m.role === 'system' || m.role === 'thought' ? 'none' : '0 4px 12px rgba(0,0,0,0.2)',
-            position: 'relative',
-            backdropFilter: m.role === 'user' || m.role === 'assistant' ? 'blur(8px)' : 'none',
-            border: m.role === 'user' || m.role === 'assistant' ? '1px solid rgba(255,255,255,0.1)' : (m.role === 'system' ? '1px solid rgba(0,0,0,0.5)' : 'none')
-          }}>
-            {m.role === 'thought' ? (
-              <div style={{ opacity: m.isStreaming ? 1 : 0.7 }}>
-                <div onClick={() => toggleThought(m.id)} style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', userSelect: 'none', color: m.isStreaming ? '#ff4444' : '#666' }}>
-                  {(expandedThoughts.has(m.id) || m.isStreaming) ? <ChevronDown size={10} /> : <ChevronRight size={10} />} 
-                  <span style={{ fontSize: '9px', fontWeight: 'bold', letterSpacing: '0.5px' }}>REASONING {m.isStreaming && "(SCANNING...)"}</span>
-                </div>
-                {(expandedThoughts.has(m.id) || m.isStreaming) && (
-                  <div style={{ marginTop: '6px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '6px', color: '#888', fontStyle: 'italic', fontSize: '10px' }}>{m.content}</div>
+      <AnimatePresence>
+        {showSettings && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            style={{ overflow: 'hidden', background: '#111', borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+          >
+            <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {['gemini', 'anthropic', 'openai'].map(p => (
+                  <button 
+                    key={p}
+                    onClick={() => handleSaveSettings(p as any, endpoint, apiKey, modelName)}
+                    style={{ flex: 1, padding: '6px', fontSize: '10px', fontWeight: 'bold', borderRadius: '4px', background: provider === p ? 'var(--accent-primary)' : '#222', color: provider === p ? '#000' : '#888', border: 'none', cursor: 'pointer' }}
+                  >
+                    {p.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+              <input type="password" placeholder="API Key..." value={apiKey} onChange={(e) => handleSaveSettings(provider, endpoint, e.target.value, modelName)} style={{ background: '#000', border: '1px solid #333', color: '#fff', padding: '8px 12px', borderRadius: '6px', fontSize: '12px', outline: 'none' }} />
+              <div style={{ display: 'flex', gap: '8px' }}>
+                 <input type="text" placeholder="Model..." value={modelName} onChange={(e) => handleSaveSettings(provider, endpoint, apiKey, e.target.value)} style={{ flex: 1, background: '#000', border: '1px solid #333', color: '#fff', padding: '8px 12px', borderRadius: '6px', fontSize: '12px', outline: 'none' }} />
+                 <button onClick={handleClearChat} style={{ padding: '8px', background: '#411', color: '#f55', border: '1px solid #622', borderRadius: '6px', cursor: 'pointer' }}><Trash2 size={16} /></button>
+              </div>
+              <button 
+                onClick={() => { setTokens({ prompt: 0, completion: 0, total: 0 }); localStorage.removeItem('llm_tokens'); }}
+                style={{ fontSize: '10px', background: '#222', color: '#888', border: '1px solid #333', padding: '8px', borderRadius: '6px', cursor: 'pointer' }}
+              >
+                RESET STATISTICS
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* PROGRESS BAR */}
+        <div style={{ height: '2px', width: '100%', background: 'rgba(255,255,255,0.05)', position: 'relative' }}>
+          {isLoading && (
+            <motion.div 
+              style={{ height: '100%', background: 'var(--accent-primary)', position: 'absolute' }}
+              animate={{ width: ['0%', '100%'], left: ['0%', '0%'] }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+            />
+          )}
+        </div>
+
+        {activeTab === 'chat' && (
+          <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {displayMessages.map((m) => (
+              <div 
+                key={m.id} 
+                style={{ 
+                  alignSelf: m.role === 'user' ? 'flex-end' : (m.role === 'assistant' ? 'flex-start' : 'center'),
+                  maxWidth: m.role === 'system' || m.role === 'thought' ? '100%' : '90%',
+                  width: m.role === 'system' || m.role === 'thought' ? '100%' : 'auto',
+                }}
+              >
+                {m.role === 'thought' ? (
+                  <div style={{ border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.4)', borderRadius: '8px', overflow: 'hidden' }}>
+                    <div 
+                      onClick={() => toggleThought(m.id)}
+                      style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: 'rgba(255,255,255,0.02)' }}
+                    >
+                      <Terminal size={12} color={m.isStreaming ? 'var(--accent-primary)' : '#666'} />
+                      <span style={{ fontSize: '9px', fontWeight: 'bold', color: '#666', letterSpacing: '0.5px' }}>
+                        {m.isStreaming ? 'COGNITIVE TRACE ACTIVE...' : 'PLANNING TRACE'}
+                      </span>
+                      {expandedThoughts.has(m.id) ? <ChevronDown size={14} color="#444" /> : <ChevronRight size={14} color="#444" />}
+                    </div>
+                    {expandedThoughts.has(m.id) && (
+                      <motion.div 
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                        style={{ padding: '10px 12px', fontSize: '11px', color: '#777', borderTop: '1px solid rgba(255,255,255,0.03)', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}
+                      >
+                        {m.content}
+                      </motion.div>
+                    )}
+                  </div>
+                ) : m.role === 'system' ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 8px', borderRadius: '4px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.03)' }}>
+                    <Activity size={10} color="#444" />
+                    <span style={{ fontSize: '10px', color: '#555', fontFamily: 'monospace' }}>{m.content}</span>
+                  </div>
+                ) : (
+                  <div style={{ position: 'relative' }}>
+                    <div style={{ 
+                      background: m.role === 'user' ? 'rgba(0, 122, 204, 0.4)' : 'rgba(255, 255, 255, 0.05)',
+                      color: '#eee',
+                      padding: '12px 16px',
+                      borderRadius: '16px',
+                      borderBottomRightRadius: m.role === 'user' ? '2px' : '16px',
+                      borderBottomLeftRadius: m.role === 'assistant' ? '2px' : '16px',
+                      fontSize: '13px',
+                      lineHeight: '1.6',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                      border: '1px solid rgba(255,255,255,0.05)',
+                      backdropFilter: 'blur(8px)'
+                    }}>
+                      <ReactMarkdown 
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          code({ node, inline, className, children, ...props }: any) {
+                            const match = /language-(\w+)/.exec(className || '');
+                            const codeStr = String(children).replace(/\n$/, '');
+                            return !inline ? (
+                              <CodeBlock 
+                                code={codeStr} 
+                                language={match ? match[1] : undefined} 
+                                onApply={codeStr.includes('fun') || codeStr.includes('and') ? (c) => onUpdateCode(c) : undefined}
+                              />
+                            ) : (
+                              <code style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 4px', borderRadius: '4px', fontSize: '12px' }} {...props}>
+                                {children}
+                              </code>
+                            );
+                          }
+                        }}
+                      >
+                        {m.content}
+                      </ReactMarkdown>
+                    </div>
+                    {m.choices && (
+                      <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {m.choices.map(c => (
+                          <motion.button 
+                            key={c.value} 
+                            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                            onClick={() => handleChoice(c.value)} 
+                            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--accent-primary)', padding: '6px 14px', borderRadius: '10px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}
+                          >
+                            {c.label}
+                          </motion.button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
-            ) : (              <>
-                {(m.role === 'user' || m.role === 'assistant') && (
-                  <div style={{ marginBottom: '4px', fontSize: '9px', color: m.role === 'user' ? '#88d' : '#888', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    {m.role === 'user' ? 'You' : 'DSP Agent'}
-                  </div>
-                )}
-                <div style={{ lineHeight: '1.4' }}>{m.content}</div>
-                {m.choices && (
-                  <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {m.choices.map(c => (
-                      <button key={c.value} onClick={() => handleChoice(c.value)} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'var(--accent-primary)', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', transition: 'all 0.2s', fontWeight: 'bold' }}>{c.label}</button>
-                    ))}
-                  </div>
-                )}
-              </>
+            ))}
+            {status && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px', color: '#666', fontSize: '11px', fontStyle: 'italic' }}>
+                <Loader2 size={14} className="animate-spin" /> {status}
+              </div>
             )}
-          </div>
-        ))}
-        {status && (
-          <div style={{ fontSize: '11px', color: '#666', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '4px' }}>
-            <Loader2 size={12} className="animate-spin" /> {status}
+            <div ref={messagesEndRef} />
           </div>
         )}
-        <div ref={messagesEndRef} />
+
+        {activeTab === 'memory' && (
+          <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+              <Brain size={24} color="var(--accent-primary)" />
+              <div>
+                <h3 style={{ margin: 0, fontSize: '16px', color: '#fff' }}>Long-term Memory</h3>
+                <p style={{ margin: 0, fontSize: '11px', color: '#666' }}>Persistent facts learned during development.</p>
+              </div>
+            </div>
+            
+            <div style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px', padding: '16px' }}>
+              {agentMemory ? (
+                <div style={{ whiteSpace: 'pre-wrap', color: '#bbb', fontSize: '12px', lineHeight: '1.8', fontFamily: 'monospace' }}>
+                  {agentMemory}
+                </div>
+              ) : (
+                <p style={{ color: '#555', fontSize: '12px', fontStyle: 'italic', textAlign: 'center', padding: '40px 0' }}>
+                  No persistent memories stored in this session.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'info' && (
+          <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+              <BookOpen size={24} color="var(--accent-primary)" />
+              <div>
+                <h3 style={{ margin: 0, fontSize: '16px', color: '#fff' }}>Reference & State</h3>
+                <p style={{ margin: 0, fontSize: '11px', color: '#666' }}>Laboratory metrics and Vult documentation context.</p>
+              </div>
+            </div>
+            <div style={{ fontSize: '11px', color: '#888', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+               {Object.entries(getTelemetry()).slice(0, 20).map(([k, v]) => (
+                 <div key={k} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.02)', paddingBottom: '4px' }}>
+                   <span style={{ color: '#666' }}>{k}</span>
+                   <span style={{ color: '#fff', fontWeight: 'bold' }}>{String(v)}</span>
+                 </div>
+               ))}
+            </div>
+          </div>
+        )}
       </div>
 
-      <div style={{ padding: '12px', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', gap: '8px', background: 'rgba(0,0,0,0.2)' }}>
-        <input 
-          type="text" 
-          value={input} 
-          onChange={(e) => setInput(e.target.value)} 
-          onKeyDown={(e) => e.key === 'Enter' && (isLoading ? handleStop() : handleSend())} 
-          placeholder={askUserResolverRef.current ? "Type your answer..." : "Ask the DSP Agent..."} 
-          style={{ 
-            flex: 1, 
-            background: 'rgba(0,0,0,0.3)', 
-            border: '1px solid rgba(255,255,255,0.1)', 
-            borderRadius: '20px', 
-            padding: '8px 16px', 
-            color: '#fff', 
-            fontSize: '13px', 
-            outline: 'none',
-            transition: 'border-color 0.2s'
-          }}
-          onFocus={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.3)'}
-          onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
-        />
-        <button 
-          onClick={isLoading ? handleStop : handleSend} 
-          disabled={!isLoading && !input.trim()} 
-          style={{ 
-            background: isLoading ? 'rgba(255,68,68,0.2)' : (!input.trim() ? 'rgba(255,255,255,0.05)' : 'rgba(0,122,204,0.6)'), 
-            border: isLoading ? '1px solid rgba(255,68,68,0.4)' : '1px solid rgba(255,255,255,0.1)', 
-            borderRadius: '50%', 
-            width: '36px', 
-            height: '36px', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center', 
-            cursor: (!isLoading && !input.trim()) ? 'not-allowed' : 'pointer', 
-            color: isLoading ? '#ff4444' : (!input.trim() ? '#666' : '#fff'), 
-            transition: 'all 0.2s',
-            backdropFilter: 'blur(4px)'
-          }}
-        >
-          {isLoading ? <StopCircle size={18} /> : <Send size={18} />}
-        </button>
+      {/* INPUT AREA */}
+      <div style={{ padding: '20px', borderTop: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.3)' }}>
+        {activeTab === 'chat' && messages.length < 10 && (
+          <div style={{ marginBottom: '16px', display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px' }}>
+             {suggestions.map(s => (
+               <button 
+                 key={s.label}
+                 onClick={() => setInput(s.prompt)}
+                 style={{ whiteSpace: 'nowrap', padding: '6px 12px', borderRadius: '16px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#aaa', fontSize: '10px', cursor: 'pointer' }}
+               >
+                 {s.label}
+               </button>
+             ))}
+          </div>
+        )}
+        
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ flex: 1, position: 'relative' }}>
+            <input 
+              type="text" 
+              value={input} 
+              onChange={(e) => setInput(e.target.value)} 
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                   isLoading ? handleStop() : handleSend();
+                } else if (e.key === 'Enter' && !isLoading && input.trim()) {
+                   handleSend();
+                }
+              }} 
+              placeholder={askUserResolverRef.current ? "Thinking..." : "Message Agent (Cmd+Enter)..."} 
+              style={{ 
+                width: '100%', 
+                background: 'rgba(0,0,0,0.4)', 
+                border: '1px solid rgba(255,255,255,0.1)', 
+                borderRadius: '12px', 
+                padding: '12px 16px', 
+                color: '#fff', 
+                fontSize: '13px', 
+                outline: 'none',
+                transition: 'all 0.2s',
+                boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)'
+              }}
+              onFocus={(e) => e.target.style.borderColor = 'var(--accent-primary)'}
+              onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+            />
+          </div>
+          <motion.button 
+            whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+            onClick={isLoading ? handleStop : handleSend} 
+            disabled={!isLoading && !input.trim()} 
+            style={{ 
+              background: isLoading ? '#622' : (!input.trim() ? '#222' : 'var(--accent-primary)'), 
+              border: 'none', 
+              borderRadius: '12px', 
+              width: '44px', 
+              height: '44px', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              cursor: (!isLoading && !input.trim()) ? 'not-allowed' : 'pointer', 
+              color: isLoading ? '#f55' : (!input.trim() ? '#444' : '#000'), 
+            }}
+          >
+            {isLoading ? <StopCircle size={20} /> : <Send size={20} />}
+          </motion.button>
+        </div>
       </div>
 
       <div 
         onMouseDown={handleResizeStart}
         style={{
-          position: 'absolute', bottom: 0, right: 0, width: '20px', height: '20px', cursor: 'se-resize', zIndex: 10000
+          position: 'absolute', bottom: 0, right: 0, width: '16px', height: '16px', cursor: 'se-resize', zIndex: 10000,
+          background: 'linear-gradient(135deg, transparent 50%, rgba(255,255,255,0.1) 50%)'
         }}
-      >
-        <svg viewBox="0 0 10 10" width="10" height="10" style={{ position: 'absolute', bottom: '4px', right: '4px', opacity: 0.5 }}>
-          <path d="M 8 10 L 10 8 M 5 10 L 10 5 M 2 10 L 10 2" stroke="#fff" strokeWidth="1" fill="none" />
-        </svg>
-      </div>
-    </div>
+      />
+    </motion.div>
   );
 });
 
