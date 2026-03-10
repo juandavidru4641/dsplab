@@ -647,6 +647,19 @@ const App: React.FC = () => {
 
   useEffect(() => {
     audioEngineRef.current.setCompilerVersion(vultVersion);
+    const triggerRecompile = async () => {
+      const playing = audioEngineRef.current.getIsPlaying();
+      if (playing) {
+        const result = await audioEngineRef.current.updateCode(code);
+        if (!result.success) { setStatus('Compile Error'); setEditorMarkers(parseVultError(result)); }
+        else { setStatus('Running'); setEditorMarkers([]); }
+      } else {
+        const result = await audioEngineRef.current.compileCheck(code);
+        if (!result.success) { setStatus('Syntax Error'); setEditorMarkers(parseVultError(result)); }
+        else { setStatus('Idle'); setEditorMarkers([]); }
+      }
+    };
+    triggerRecompile();
   }, [vultVersion]);
 
 
