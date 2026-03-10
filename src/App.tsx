@@ -407,15 +407,27 @@ and default() {
 `
 };
 
-const SYSTEM_PROMPT = `
+const SYSTEM_PROMPT_BASE = `
 Role: Senior DSP Research Scientist and Mentor. 
 Environment: DSPLab – A Professional Real-time IDE with Live Telemetry, 12 CC Knobs (30-41), and 6-voice polyphony.
 
-STRICT VULT LANGUAGE CONSTRAINTS:
+VULT COMPILER INFORMATION:
+- The environment supports multiple Vult versions. Check the "VULT VERSION CONTEXT" for the currently active version.
+
+STRICT VULT LANGUAGE CONSTRAINTS (GENERAL):
 1. DO NOT use 'and', 'or', 'not'. Use C-style '&&', '||', '!' operators ONLY.
 2. EVERY statement MUST end with a semicolon ';'.
 3. Use 'real' for all floating point operations and 'int' for indices/counters.
 4. Entry point MUST be 'fun process(input: real, ...)' – it can return a single 'real' (Mono) or multiple values (Stereo, e.g. 'return L, R;'). IMPORTANT: All return points in the same function MUST return the same type (either all mono or all stereo). Additional parameters (knobs) match CCs automatically.
+
+VULT V1 FEATURES (Available only if Vult v1 is active):
+- 'iter(i, size)' for loops.
+- 'match(x) { val -> ... }' for pattern matching.
+- 'string' type and string literals ("text").
+- 'size(array)' and 'length(string)' functions.
+- 'array(type, size)' and 'array(type)' for generic arrays.
+- 'instances[i]:counter()' for calling functions on arrays of instances.
+- 'enum Name { Value1, Value2 }' for enumerations.
 
 CODE INTEGRITY MANDATE:
 - When using 'update_code', you MUST provide the ENTIRE source code of the program. NEVER provide partial snippets, single functions, or placeholders.
@@ -1379,7 +1391,27 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      <LLMPane currentCode={code} onUpdateCode={handleAgentUpdateCode} onSetKnob={(cc, val) => audioEngineRef.current.sendControlChange(cc, val, 0)} onTriggerGenerator={(idx) => audioEngineRef.current.triggerGenerator(idx)} onConfigureInput={(idx, config) => updateInput(idx, config)} onLoadPreset={(name) => loadPreset(name)} onSaveSnapshot={(msg) => saveSnapshot(msg)} onSetProbes={(probes) => { setActiveProbes(probes); audioEngineRef.current.setProbes(probes); }} onConfigureSequencer={(bpm, steps, playing) => { if (bpm !== undefined) setSeqBpm(bpm); if (steps !== undefined) setSeqSteps(steps); if (playing !== undefined) setSeqPlaying(playing); }} getPresets={() => Object.keys(PRESETS)} getSequencerState={() => ({ bpm: seqBpm, steps: seqSteps, playing: seqPlaying })} getTelemetry={() => audioEngineRef.current.getLiveState()} getTelemetryHistory={() => audioEngineRef.current.getTelemetryHistory()} getSpectrum={() => Array.from(audioEngineRef.current.getSpectrumData())} getPeakFrequencies={(count) => audioEngineRef.current.getPeakFrequencies(count)} getHarmonics={() => audioEngineRef.current.getHarmonics()} getSignalQuality={() => audioEngineRef.current.getSignalQualityMetrics()} getAudioMetrics={() => audioEngineRef.current.getAudioMetrics()} systemPrompt={SYSTEM_PROMPT} />
+      <LLMPane 
+        currentCode={code} 
+        onUpdateCode={handleAgentUpdateCode} 
+        onSetKnob={(cc, val) => audioEngineRef.current.sendControlChange(cc, val, 0)} 
+        onTriggerGenerator={(idx) => audioEngineRef.current.triggerGenerator(idx)} 
+        onConfigureInput={(idx, config) => updateInput(idx, config)} 
+        onLoadPreset={(name) => loadPreset(name)} 
+        onSaveSnapshot={(msg) => saveSnapshot(msg)} 
+        onSetProbes={(probes) => { setActiveProbes(probes); audioEngineRef.current.setProbes(probes); }} 
+        onConfigureSequencer={(bpm, steps, playing) => { if (bpm !== undefined) setSeqBpm(bpm); if (steps !== undefined) setSeqSteps(steps); if (playing !== undefined) setSeqPlaying(playing); }} 
+        getPresets={() => Object.keys(PRESETS)} 
+        getSequencerState={() => ({ bpm: seqBpm, steps: seqSteps, playing: seqPlaying })} 
+        getTelemetry={() => audioEngineRef.current.getLiveState()} 
+        getTelemetryHistory={() => audioEngineRef.current.getTelemetryHistory()} 
+        getSpectrum={() => Array.from(audioEngineRef.current.getSpectrumData())} 
+        getPeakFrequencies={(count) => audioEngineRef.current.getPeakFrequencies(count)} 
+        getHarmonics={() => audioEngineRef.current.getHarmonics()} 
+        getSignalQuality={() => audioEngineRef.current.getSignalQualityMetrics()} 
+        getAudioMetrics={() => audioEngineRef.current.getAudioMetrics()} 
+        systemPrompt={SYSTEM_PROMPT_BASE + `\nVULT VERSION CONTEXT: The compiler is currently set to: ${vultVersion === 'v0' ? 'Vult 0.4.15' : 'Vult v1'}.`} 
+      />
 
       {showExportModal && (
         <div style={{

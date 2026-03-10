@@ -147,7 +147,11 @@ const VultEditor = forwardRef<VultEditorHandle, VultEditorProps>(({
       },
     });
 
-    const vultKeywords = ['fun', 'mem', 'val', 'if', 'else', 'then', 'return', 'true', 'false', 'real', 'int', 'bool', 'type', 'external', 'init', 'array'];
+    const vultKeywords = [
+      'fun', 'mem', 'val', 'if', 'else', 'then', 'return', 'true', 'false', 
+      'real', 'int', 'bool', 'type', 'external', 'init', 'array',
+      'iter', 'match', 'enum', 'string', 'case'
+    ];
     const vultStdlib: Record<string, { desc: string, snippet: string }> = {
       'sin': { desc: 'Sine function', snippet: 'sin(${1:x})' },
       'cos': { desc: 'Cosine function', snippet: 'cos(${1:x})' },
@@ -164,19 +168,24 @@ const VultEditor = forwardRef<VultEditorHandle, VultEditorProps>(({
       'random': { desc: 'Returns uniformly distributed pseudo-random value', snippet: 'random()' },
       'noise': { desc: 'Generates white noise (-1.0 to 1.0)', snippet: 'noise()' },
       'samplerate': { desc: 'Returns the current context sample rate', snippet: 'samplerate()' },
+      'size': { desc: 'Returns the size of an array (Vult v1)', snippet: 'size(${1:array})' },
+      'length': { desc: 'Returns the length of a string (Vult v1)', snippet: 'length(${1:string})' },
+      'string': { desc: 'Converts a value to string (Vult v1)', snippet: 'string(${1:value})' },
+      'pi': { desc: 'Returns the value of PI', snippet: 'pi()' },
     };
 
     monaco.languages.setMonarchTokensProvider('vult', {
       keywords: [
-        'fun', 'mem', 'val', 'if', 'else', 'then', 'return', 'true', 'false', 'and', 'not', 'or', 'external', 'type', 'init', 'array'
+        'fun', 'mem', 'val', 'if', 'else', 'then', 'return', 'true', 'false', 
+        'and', 'not', 'or', 'external', 'type', 'init', 'array', 'iter', 'match', 'enum', 'case', '_'
       ],
       typeKeywords: [
-        'real', 'int', 'bool'
+        'real', 'int', 'bool', 'string'
       ],
       operators: [
         '=', '>', '<', '!', '==', '<=', '>=', '!=',
         '&&', '||', '+', '-', '*', '/', '%',
-        '+=', '-=', '*=', '/='
+        '+=', '-=', '*=', '/=', '->', ':'
       ],
       symbols:  /[=><!&|+\-*\/%]+/,
       tokenizer: {
@@ -184,6 +193,7 @@ const VultEditor = forwardRef<VultEditorHandle, VultEditorProps>(({
           [/(fun)(\s+)([a-zA-Z_]\w*)/, ['keyword', 'white', 'keyword.function']],
           [/([a-zA-Z_]\w*)(\s*)(?=\()/, 'keyword.function'],
           [/@[a-zA-Z_]\w*/, 'annotation'],
+          [/"/,  'string', '@string'],
           [/[a-zA-Z_]\w*/, { cases: { 
             '@typeKeywords': 'type',
             '@keywords': 'keyword',
@@ -194,6 +204,11 @@ const VultEditor = forwardRef<VultEditorHandle, VultEditorProps>(({
           [/@symbols/, { cases: { '@operators': 'operator', '@default': '' } }],
           [/\b\d+(\.\d+)?([eE][\-+]?\d+)?\b/, 'number'],
           [/[;,.]/, 'delimiter'],
+        ],
+        string: [
+          [/[^\\"]+/,  'string'],
+          [/\\./,      'string.escape'],
+          [/"/,        'string', '@pop']
         ],
         whitespace: [
           [/[ \t\r\n]+/, 'white'],
