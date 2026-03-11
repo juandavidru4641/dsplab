@@ -80,6 +80,13 @@ const App: React.FC = () => {
   const [exportTarget, setExportTarget] = useState('c');
   const [exportJavaPrefix, setExportJavaPrefix] = useState('com.example');
   const [exportTemplate, setExportTemplate] = useState('default');
+
+  const handleExportTargetChange = (target: string) => {
+    setExportTarget(target);
+    if (target === 'c-pd') setExportTemplate('pd');
+    else if (target === 'c-teensy') setExportTemplate('teensy');
+    else if (target === 'c') setExportTemplate('default');
+  };
   const [exportStatus, setExportStatus] = useState('');
 
   // Community presets (fetched from GitHub)
@@ -1137,7 +1144,7 @@ const App: React.FC = () => {
                       name="exportTarget"
                       value={opt.value}
                       checked={exportTarget === opt.value}
-                      onChange={() => setExportTarget(opt.value)}
+                      onChange={() => handleExportTargetChange(opt.value)}
                       style={{ accentColor: 'var(--accent-primary)' }}
                     />
                     <span style={{ color: exportTarget === opt.value ? '#e0e0e0' : '#888', fontSize: '13px' }}>{opt.label}</span>
