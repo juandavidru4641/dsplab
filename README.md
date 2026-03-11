@@ -1,5 +1,7 @@
 # DSPLab
 
+<img width="1408" height="768" alt="image" src="https://github.com/user-attachments/assets/97c8bf26-7124-4af7-877e-6830e75fb506" />
+
 A development environment and diagnostic laboratory for DSP engineering.
 
 <img width="1624" height="1008" alt="Screenshot 2026-03-10 at 20 48 43" src="https://github.com/user-attachments/assets/dd3406a6-91b8-42df-b2e8-f5aee413bd0a" />
