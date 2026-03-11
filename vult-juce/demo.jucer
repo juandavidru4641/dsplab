@@ -4,27 +4,29 @@
   <MAINGROUP id="vultMain" name="DSPLabVult">
     <GROUP id="{VULTSRC}" name="Source">
       <FILE id="procCpp" name="PluginProcessor.cpp" compile="1" resource="0"
-            file="Source/PluginProcessor.cpp"/>
+            file="PluginProcessor.cpp"/>
       <FILE id="procH" name="PluginProcessor.h" compile="0" resource="0"
-            file="Source/PluginProcessor.h"/>
+            file="PluginProcessor.h"/>
       <FILE id="editCpp" name="PluginEditor.cpp" compile="1" resource="0"
-            file="Source/PluginEditor.cpp"/>
+            file="PluginEditor.cpp"/>
       <FILE id="editH" name="PluginEditor.h" compile="0" resource="0"
-            file="Source/PluginEditor.h"/>
+            file="PluginEditor.h"/>
+    </GROUP>
+    <GROUP id="{VULTDSP}" name="DSP">
       <FILE id="vultProcCpp" name="VultProcessor.cpp" compile="1" resource="0"
-            file="Source/VultProcessor.cpp"/>
+            file="VultProcessor.cpp"/>
       <FILE id="vultProcH" name="VultProcessor.h" compile="0" resource="0"
-            file="Source/VultProcessor.h"/>
+            file="VultProcessor.h"/>
       <FILE id="dsplabCpp" name="dsplab.cpp" compile="1" resource="0"
-            file="Source/dsplab.cpp"/>
+            file="dsplab.cpp"/>
       <FILE id="dsplabH" name="dsplab.h" compile="0" resource="0"
-            file="Source/dsplab.h"/>
+            file="dsplab.h"/>
       <FILE id="dsplabTables" name="dsplab.tables.h" compile="0" resource="0"
-            file="Source/dsplab.tables.h"/>
+            file="dsplab.tables.h"/>
       <FILE id="vultinCpp" name="vultin.cpp" compile="1" resource="0"
-            file="Source/vultin.cpp"/>
+            file="vultin.cpp"/>
       <FILE id="vultinH" name="vultin.h" compile="0" resource="0"
-            file="Source/vultin.h"/>
+            file="vultin.h"/>
     </GROUP>
   </MAINGROUP>
   <MODULES/>
