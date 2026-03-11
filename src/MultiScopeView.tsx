@@ -182,8 +182,8 @@ const MultiScopeView: React.FC<MultiScopeViewProps> = ({ probes, onStateUpdate }
           <Knob label="TIME" value={timebase} min={100} max={5000} onChange={setTimebase} size={28} color="#00ffcc" isFloat={false} />
         </div>
       )}
-      <div style={{ flex: 1, border: '1px solid #333', background: '#000', borderRadius: '8px', overflow: 'hidden', minHeight: 0 }}>
-        <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
+      <div style={{ flex: 1, border: '1px solid #333', background: '#000', borderRadius: '8px', overflow: 'auto', minHeight: '150px' }}>
+        <canvas ref={canvasRef} style={{ width: '100%', minHeight: '150px', display: 'block' }} />
       </div>
     </div>
   );

@@ -36,7 +36,7 @@ const App: React.FC = () => {
   };
   const [savedProjects, setSavedProjects] = useState<string[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [vultVersion, setVultVersion] = useState<'v0' | 'v1'>('v0');
+  const [vultVersion, setVultVersion] = useState<'v0' | 'v1'>('v1');
   const [status, setStatus] = useState('Idle');
   const [_audioStatus, setAudioStatus] = useState<{ state: string; sampleRate: number }>({ state: 'suspended', sampleRate: 0 });
   const [editorMarkers, setEditorMarkers] = useState<any[]>([]);
@@ -1020,7 +1020,7 @@ const App: React.FC = () => {
                     <StateInspector onStateUpdate={(cb) => audioEngineRef.current.onStateUpdate(cb)} onProbe={toggleProbe} onSetState={(path, val) => audioEngineRef.current.setState(path, val)} activeProbes={activeProbes} />
                   </div>
                   {activeProbes.length > 0 && (
-                    <div className="mini-scope-section" style={{ height: '300px', padding: '10px', background: '#111', borderTop: '1px solid #333' }}>
+                    <div className="mini-scope-section" style={{ height: '300px', minHeight: '200px', padding: '10px', background: '#111', borderTop: '1px solid #333', overflowY: 'auto' }}>
                       <div className="section-title"><Activity size={12} /> PROBE SCOPE (MULTI-TRACE)</div>
                       <MultiScopeView probes={activeProbes} onStateUpdate={(cb) => audioEngineRef.current.onStateUpdate(cb)} />
                     </div>
