@@ -20,6 +20,7 @@ import { useCommunityPresets, loadPresetCode } from './useCommunityPresets';
 import { PRESETS } from './constants/presets';
 import { SYSTEM_PROMPT_BASE } from './constants/systemPrompt';
 import { EXPORT_OPTIONS } from './constants/exportOptions';
+import { parseVultError } from './utils/vultError';
 import './App.css';
 
 const App: React.FC = () => {
@@ -327,31 +328,6 @@ const App: React.FC = () => {
       setIsPlaying(true);
       setSeqPlaying(true);
     }
-  };
-
-  const parseVultError = (result: any) => {
-    let markers: any[] = [];
-    if (result.rawErrors && Array.isArray(result.rawErrors)) {
-      result.rawErrors.forEach((err: any) => {
-        if (err.row !== undefined && err.row !== null) {
-          const r = parseInt(err.row) + 1;
-          const c = parseInt(err.column) + 1;
-          markers.push({ startLineNumber: r, endLineNumber: r, startColumn: c, endColumn: c + 3, message: err.msg || err.text, severity: 8 });
-        }
-      });
-    }
-
-    if (markers.length === 0 && result.error) {
-       const errorStr = typeof result.error === 'string' ? result.error : '';
-       const lineMatch = errorStr.match(/line (\d+)/i);
-       const colMatch = errorStr.match(/column (\d+)/i) || errorStr.match(/characters (\d+)/i);
-       if (lineMatch) {
-         const line = parseInt(lineMatch[1]);
-         const col = colMatch ? parseInt(colMatch[1]) : 1;
-         markers.push({ startLineNumber: line, endLineNumber: line, startColumn: col, endColumn: col + 1, message: errorStr.replace(/Errors in the program:\s*/, '').trim(), severity: 8 });
-       }
-    }
-    return markers;
   };
 
   const handleCodeChange = (value: string | undefined) => {
