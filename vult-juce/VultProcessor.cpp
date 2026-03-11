@@ -9,6 +9,7 @@
 */
 
 #include "VultProcessor.h"
+#include <cstring>
 
 // Include your generated Vult code here:
 // #include "dsplab.h"
