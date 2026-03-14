@@ -6,7 +6,7 @@ import { MIDIController } from './MIDIController';
 import VultEditor from './VultEditor';
 import type { VultEditorHandle } from './VultEditor';
 import ScopeView from './ScopeView';
-import SpectrumView from './SpectrumView';
+import SpectrumView from './components/analysis/SpectrumView';
 import StatsView from './StatsView';
 import LLMPane from './LLMPane';
 import VirtualMIDI from './VirtualMIDI';
