@@ -1,0 +1,76 @@
+/* Ghost Button */
+.ghost-btn {
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-control);
+  font-size: var(--font-size-label);
+  color: var(--text-tertiary);
+  background: transparent;
+  transition: all var(--transition-fast);
+  user-select: none;
+  white-space: nowrap;
+}
+.ghost-btn:hover {
+  background: var(--bg-elevated);
+  border-color: var(--border-strong);
+  color: var(--text-secondary);
+}
+.ghost-btn--active {
+  background: rgba(78, 205, 196, 0.12);
+  border-color: var(--accent-secondary);
+  color: var(--accent-secondary);
+}
+
+/* Pill */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-tiny);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+/* Toggle Group */
+.toggle-group {
+  display: inline-flex;
+  background: var(--bg-base);
+  border-radius: var(--radius-control);
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+}
+.toggle-group__item {
+  padding: 2px 8px;
+  font-size: var(--font-size-tiny);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+.toggle-group__item:hover {
+  color: var(--text-tertiary);
+}
+.toggle-group__item--active {
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+}
+
+/* Divider */
+.divider {
+  width: 1px;
+  height: 16px;
+  background: var(--border-default);
+  flex-shrink: 0;
+  align-self: center;
+}
+
+/* Label */
+.label {
+  font-size: var(--font-size-label);
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  user-select: none;
+}
