@@ -1,0 +1,223 @@
+.vk-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  user-select: none;
+}
+
+/* Header controls */
+.vk-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 2px 4px;
+}
+
+.vk-octave-selector {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.vk-octave-btn {
+  background: var(--bg-control);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-control);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-tiny);
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.vk-octave-btn:hover {
+  background: var(--bg-elevated);
+  border-color: var(--border-strong);
+}
+
+.vk-octave-label {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-tiny);
+  color: var(--text-tertiary);
+  min-width: 40px;
+  text-align: center;
+}
+
+.vk-vel-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.vk-vel-label {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  color: var(--text-faint);
+}
+
+.vk-vel-value {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  color: var(--text-tertiary);
+  min-width: 18px;
+  text-align: right;
+}
+
+.vk-sustain-btn {
+  background: transparent;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-control);
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: 7px;
+  padding: 2px 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.vk-sustain-btn:hover {
+  border-color: var(--border-strong);
+}
+
+.vk-sustain-btn.active {
+  background: var(--accent-secondary);
+  color: var(--bg-base);
+  border-color: var(--accent-secondary);
+}
+
+.vk-sustain-hint {
+  font-size: 7px;
+  color: var(--text-muted);
+}
+
+/* Body: wheels + keys */
+.vk-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+}
+
+/* Wheels area */
+.vk-wheels {
+  display: flex;
+  gap: 2px;
+  padding-right: 12px;
+  flex-shrink: 0;
+}
+
+.vk-wheel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.vk-wheel-label {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+/* Piano keys area */
+.vk-keys-wrapper {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+
+.vk-keys {
+  display: flex;
+  position: relative;
+  height: 55px;
+}
+
+.vk-white-key {
+  flex: 1;
+  position: relative;
+  background: linear-gradient(to bottom, #e0e0e0, #c8c8c8 90%, #b0b0b0);
+  border: 1px solid #999;
+  border-top: none;
+  border-radius: 0 0 3px 3px;
+  cursor: pointer;
+  touch-action: none;
+  z-index: 1;
+  transition: background 0.05s;
+}
+
+.vk-white-key:not(:first-child) {
+  border-left: none;
+}
+
+.vk-white-key.pressed {
+  background: linear-gradient(to bottom, #b0b0b0, #a0a0a0 90%, #909090);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+  border-bottom: 3px solid var(--accent-secondary);
+}
+
+.vk-black-key {
+  position: absolute;
+  top: 0;
+  width: 0;
+  z-index: 2;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.vk-black-key-inner {
+  position: absolute;
+  top: 0;
+  left: -50%;
+  width: 100%;
+  height: 55%;
+  background: linear-gradient(to bottom, #2a2a2a, #1a1a1a 85%, #111);
+  border-radius: 0 0 3px 3px;
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.5);
+  pointer-events: auto;
+}
+
+/* The black key hit area is on the inner element */
+.vk-black-key.pressed .vk-black-key-inner {
+  background: linear-gradient(to bottom, #3a3a3a, #2a2a2a 85%, #222);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+  border-bottom: 3px solid var(--accent-primary);
+}
+
+/* C note labels */
+.vk-c-label {
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 7px;
+  color: var(--text-tertiary);
+  pointer-events: none;
+  line-height: 1;
+}
+
+/* Keyboard mapping hints */
+.vk-key-hint {
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 7px;
+  color: var(--text-faint);
+  pointer-events: none;
+  line-height: 1;
+}
+
+.vk-black-key .vk-key-hint {
+  color: rgba(255, 255, 255, 0.15);
+}
