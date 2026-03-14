@@ -25,22 +25,6 @@
   --accent-primary-hover: #ff8555;
 }
 
-/* ---------- SCOPE ---------- */
-.scope-section {
-  display: flex;
-  flex-direction: column;
-  flex: 0 0 auto;
-  max-height: 85vh;
-  padding: 12px 10px;
-  border-bottom: 1px solid var(--border-subtle);
-  background: #000;
-  overflow-y: auto;
-  overflow-x: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: #333 transparent;
-  gap: 8px;
-}
-
 /* ---------- LLM ---------- */
 .llm-section {
   flex: 1;
