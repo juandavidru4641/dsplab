@@ -7,6 +7,10 @@ export interface VultEditorHandle {
   insertAtCursor: (text: string) => void;
   /** Forcefully set the editor value, bypassing normal prop-sync checks. */
   setValue: (value: string) => void;
+  /** Get the raw Monaco editor instance (may be null). */
+  getEditor: () => any;
+  /** Get the raw Monaco namespace (may be null). */
+  getMonaco: () => Monaco | null;
 }
 
 interface VultEditorProps {
@@ -83,7 +87,13 @@ const VultEditor = forwardRef<VultEditorHandle, VultEditorProps>(({
         editorRef.current.setValue(val);
         lastCodeRef.current = val;
       }
-    }
+    },
+    getEditor() {
+      return editorRef.current;
+    },
+    getMonaco() {
+      return monacoRef.current;
+    },
   }));
 
   useEffect(() => {
