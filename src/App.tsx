@@ -31,6 +31,9 @@ import type { PanelId } from './hooks/usePanelManager';
 import { useCommandPalette } from './hooks/useCommandPalette';
 import type { Command } from './hooks/useCommandPalette';
 import { CommandPalette } from './components/palette/CommandPalette';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import type { Shortcut } from './hooks/useKeyboardShortcuts';
+import ShortcutsOverlay from './components/shortcuts/ShortcutsOverlay';
 import './styles/legacy.css';
 
 const App: React.FC = () => {
@@ -663,17 +666,22 @@ const App: React.FC = () => {
 
   const commandPalette = useCommandPalette(paletteCommands);
 
-  // Global ⌘K / Ctrl+K listener
-  useEffect(() => {
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        commandPalette.open();
-      }
-    };
-    window.addEventListener('keydown', handleGlobalKeyDown);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [commandPalette.open]);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+
+  const panelIds: PanelId[] = ['inputs', 'sequencer', 'keyboard', 'presets', 'ai'];
+
+  const shortcuts: Shortcut[] = useMemo(() => [
+    { key: 'Space', action: handleTogglePlay, description: 'Play / Stop', category: 'Transport' },
+    { key: 'k', meta: true, action: () => commandPalette.open(), description: 'Command Palette', category: 'General' },
+    { key: '/', meta: true, action: () => setShowShortcuts(prev => !prev), description: 'Toggle Shortcuts', category: 'General' },
+    { key: '1', meta: true, action: () => panelManager.togglePanel('inputs'), description: 'Toggle Inputs', category: 'Panels' },
+    { key: '2', meta: true, action: () => panelManager.togglePanel('sequencer'), description: 'Toggle Sequencer', category: 'Panels' },
+    { key: '3', meta: true, action: () => panelManager.togglePanel('keyboard'), description: 'Toggle Keyboard', category: 'Panels' },
+    { key: '4', meta: true, action: () => panelManager.togglePanel('presets'), description: 'Toggle Presets', category: 'Panels' },
+    { key: '5', meta: true, action: () => panelManager.togglePanel('ai'), description: 'Toggle AI', category: 'Panels' },
+  ], [handleTogglePlay, commandPalette.open, panelManager]);
+
+  useKeyboardShortcuts(shortcuts);
 
   const panelTitles: Record<PanelId, string> = {
     editor: 'Editor',
@@ -1009,6 +1017,12 @@ const App: React.FC = () => {
         commands={commandPalette.filteredCommands}
         onExecute={commandPalette.execute}
         onClose={commandPalette.close}
+      />
+
+      <ShortcutsOverlay
+        isOpen={showShortcuts}
+        onClose={() => setShowShortcuts(false)}
+        shortcuts={shortcuts}
       />
     </>
   );
