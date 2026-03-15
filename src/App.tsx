@@ -884,25 +884,43 @@ const App: React.FC = () => {
       )}
 
       {showExportModal && (
-        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowExportModal(false); }}>
+        <div
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000,
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowExportModal(false); }}
+        >
           <div style={{
-            background: '#1a1a1a', border: '1px solid #333', borderRadius: '6px',
-            padding: '24px', width: '340px', display: 'flex', flexDirection: 'column', gap: '16px'
+            background: 'var(--bg-surface)', border: '1px solid var(--border-default)',
+            borderRadius: 'var(--radius-panel)', padding: '24px', width: '340px',
+            display: 'flex', flexDirection: 'column', gap: '16px',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--accent-primary)', fontWeight: 'bold', fontSize: '12px', letterSpacing: '1px', textTransform: 'uppercase' }}>Export Code</span>
-              <span style={{ color: '#555', cursor: 'pointer', fontSize: '18px', lineHeight: 1 }} onClick={() => setShowExportModal(false)}>x</span>
+              <span style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '14px' }}>Export</span>
+              <span
+                style={{
+                  color: 'var(--text-muted)', cursor: 'pointer', fontSize: '18px', lineHeight: 1,
+                  background: 'transparent', border: 'none', padding: '2px 6px', borderRadius: 'var(--radius-control)',
+                  transition: 'var(--transition-fast)',
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg-control)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                onClick={() => setShowExportModal(false)}
+              >&times;</span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label style={{ color: '#888', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Target Language</label>
+              <label style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Target Language</label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 {EXPORT_OPTIONS.map(opt => (
                   <label key={opt.value} style={{
                     display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px',
-                    borderRadius: '4px', cursor: 'pointer',
-                    background: exportTarget === opt.value ? '#252525' : 'transparent',
-                    border: `1px solid ${exportTarget === opt.value ? '#444' : 'transparent'}`,
+                    borderRadius: 'var(--radius-control)', cursor: 'pointer',
+                    background: exportTarget === opt.value ? 'var(--bg-control)' : 'transparent',
+                    border: `1px solid ${exportTarget === opt.value ? 'var(--border-strong)' : 'transparent'}`,
+                    transition: 'var(--transition-fast)',
                   }}>
                     <input
                       type="radio"
@@ -912,8 +930,8 @@ const App: React.FC = () => {
                       onChange={() => handleExportTargetChange(opt.value)}
                       style={{ accentColor: 'var(--accent-primary)' }}
                     />
-                    <span style={{ color: exportTarget === opt.value ? '#e0e0e0' : '#888', fontSize: '13px' }}>{opt.label}</span>
-                    <span style={{ marginLeft: 'auto', color: '#444', fontSize: '11px', fontFamily: 'monospace' }}>{opt.ext}</span>
+                    <span style={{ color: exportTarget === opt.value ? 'var(--text-primary)' : 'var(--text-tertiary)', fontSize: '13px' }}>{opt.label}</span>
+                    <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', fontSize: 'var(--font-size-secondary)', fontFamily: 'var(--font-mono)' }}>{opt.ext}</span>
                   </label>
                 ))}
               </div>
@@ -921,15 +939,15 @@ const App: React.FC = () => {
 
             {exportTarget === 'java' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ color: '#888', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Java Package Prefix</label>
+                <label style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Java Package Prefix</label>
                 <input
                   type="text"
                   value={exportJavaPrefix}
                   onChange={e => setExportJavaPrefix(e.target.value)}
                   placeholder="com.example"
                   style={{
-                    background: '#111', border: '1px solid #333', borderRadius: '4px',
-                    color: '#e0e0e0', padding: '7px 10px', fontSize: '13px', fontFamily: 'monospace'
+                    background: 'var(--bg-base)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-control)',
+                    color: 'var(--text-primary)', padding: '7px 10px', fontSize: '13px', fontFamily: 'var(--font-mono)',
                   }}
                 />
               </div>
@@ -937,13 +955,13 @@ const App: React.FC = () => {
 
             {exportTarget === 'c' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ color: '#888', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Template</label>
+                <label style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Template</label>
                 <select
                   value={exportTemplate}
                   onChange={e => setExportTemplate(e.target.value)}
                   style={{
-                    background: '#111', border: '1px solid #333', borderRadius: '4px',
-                    color: '#e0e0e0', padding: '7px 10px', fontSize: '13px'
+                    background: 'var(--bg-base)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-control)',
+                    color: 'var(--text-primary)', padding: '7px 10px', fontSize: '13px',
                   }}
                 >
                   <option value="default">Default</option>
@@ -960,22 +978,28 @@ const App: React.FC = () => {
 
             {exportStatus && (
               <div style={{
-                padding: '8px 10px', borderRadius: '4px', fontSize: '12px',
-                background: exportStatus.startsWith('Error') ? '#2a1515' : '#151a15',
-                color: exportStatus.startsWith('Error') ? '#ff6666' : '#66cc66',
-                border: `1px solid ${exportStatus.startsWith('Error') ? '#5a2020' : '#205a20'}`,
-                wordBreak: 'break-word'
-              }}>{exportStatus}</div>
+                padding: '8px 10px', borderRadius: 'var(--radius-control)', fontSize: 'var(--font-size-body)',
+                background: exportStatus.startsWith('Error') ? 'rgba(255, 107, 53, 0.1)' : 'rgba(78, 205, 196, 0.1)',
+                color: exportStatus.startsWith('Error') ? 'var(--accent-primary)' : 'var(--accent-secondary)',
+                border: `1px solid ${exportStatus.startsWith('Error') ? 'rgba(255, 107, 53, 0.3)' : 'rgba(78, 205, 196, 0.3)'}`,
+                wordBreak: 'break-word',
+              }}>
+                {exportStatus === 'Generating...'
+                  ? <span style={{ color: 'var(--text-muted)' }}>{exportStatus}</span>
+                  : exportStatus}
+              </div>
             )}
 
             <button
               onClick={handleExport}
               disabled={exportStatus === 'Generating...'}
               style={{
-                background: 'var(--accent-primary)', color: '#000', border: 'none', borderRadius: '4px',
-                padding: '9px 0', fontWeight: 'bold', fontSize: '12px', letterSpacing: '1px',
-                textTransform: 'uppercase', cursor: exportStatus === 'Generating...' ? 'not-allowed' : 'pointer',
-                opacity: exportStatus === 'Generating...' ? 0.6 : 1
+                background: 'var(--accent-primary)', color: '#000', border: 'none',
+                borderRadius: 'var(--radius-control)', padding: '9px 0', fontWeight: 600,
+                fontSize: 'var(--font-size-body)', letterSpacing: '1px', textTransform: 'uppercase',
+                cursor: exportStatus === 'Generating...' ? 'not-allowed' : 'pointer',
+                opacity: exportStatus === 'Generating...' ? 0.6 : 1,
+                transition: 'var(--transition-fast)',
               }}
             >
               {exportStatus === 'Generating...' ? 'Generating...' : 'Export'}
