@@ -49,3 +49,16 @@
   border-radius: 50%;
   background: var(--accent-secondary);
 }
+
+@media (max-width: 768px) {
+  .activity-bar {
+    width: 100%;
+    height: var(--topbar-height);
+    flex-direction: row;
+    justify-content: space-around;
+    order: 1;
+    padding: 0 10px;
+    gap: 4px;
+  }
+  .activity-bar__spacer { display: none; }
+}

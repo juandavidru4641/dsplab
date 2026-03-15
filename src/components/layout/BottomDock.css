@@ -21,3 +21,11 @@
   opacity: 0.3;
   border-radius: 2px;
 }
+
+@media (max-width: 768px) {
+  .bottom-dock {
+    flex-direction: column;
+    height: auto;
+    max-height: 50vh;
+  }
+}

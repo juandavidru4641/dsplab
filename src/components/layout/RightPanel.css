@@ -53,3 +53,16 @@
   overflow-y: auto;
   min-height: 0;
 }
+
+@media (max-width: 768px) {
+  .right-panel {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    z-index: 100;
+    border-radius: 0;
+  }
+  .right-panel--hidden {
+    display: none;
+  }
+}

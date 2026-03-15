@@ -21,3 +21,9 @@
   gap: var(--panel-gap);
   min-width: 0;
 }
+
+@media (max-width: 768px) {
+  .app-shell__body {
+    flex-direction: column;
+  }
+}
