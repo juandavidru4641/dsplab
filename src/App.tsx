@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Square, Zap, Activity, Download, Sliders, Code2, History, Music, Keyboard, Code, Wrench, HardDrive, PackageOpen } from 'lucide-react';
+import { PackageOpen } from 'lucide-react';
 import { AudioEngine } from './AudioEngine';
 import type { InputSource, SourceType } from './AudioEngine';
 import { MIDIController } from './MIDIController';
@@ -9,12 +9,12 @@ import ScopeView from './components/analysis/ScopeView';
 import SpectrumView from './components/analysis/SpectrumView';
 import StatsView from './components/analysis/StatsView';
 import LLMPane from './LLMPane';
-import VirtualMIDI from './VirtualMIDI';
 import StateInspector from './StateInspector';
 import MultiScopeView from './components/analysis/MultiScopeView';
-import Sequencer from './Sequencer';
-import type { Step } from './Sequencer';
-import { Knob } from './Knob';
+import { VirtualKeyboard } from './components/keyboard/VirtualKeyboard';
+import { StepSequencer } from './components/sequencer/StepSequencer';
+import type { Step } from './components/sequencer/StepSequencer';
+import { InputsPanel } from './components/inputs/InputsPanel';
 import CommunityPresetsModal from './CommunityPresetsModal';
 import { useCommunityPresets, loadPresetCode } from './useCommunityPresets';
 import JSZip from 'jszip';
@@ -69,6 +69,7 @@ const App: React.FC = () => {
     { name: 'OH', note: 46, steps: Array(32).fill(null).map(() => ({ active: false, accent: false })) },
   ]);
   const [seqCCTracks, setSeqCCTracks] = useState<any[]>([]);
+  const [seqCurrentStep, setSeqCurrentStep] = useState(-1);
 
   const midiNoteLedRef = useRef<HTMLDivElement>(null);
   const midiCcLedRef = useRef<HTMLDivElement>(null);
@@ -301,6 +302,22 @@ const App: React.FC = () => {
   }, [saveSnapshot]);
 
   useEffect(() => { audioEngineRef.current.setSources(inputs); }, [inputs]);
+
+  // Sync sequencer state to AudioWorklet
+  useEffect(() => {
+    audioEngineRef.current.setSequencer({
+      isPlaying: seqPlaying, bpm: seqBpm, steps: seqSteps,
+      length: seqLength, gateLength: seqGateLength, mode: seqMode,
+      tracks: seqDrumTracks, ccTracks: seqCCTracks,
+    } as any);
+  }, [seqPlaying, seqBpm, seqSteps, seqLength, seqGateLength, seqMode, seqDrumTracks, seqCCTracks]);
+
+  // Listen for sequencer step ticks from AudioWorklet
+  useEffect(() => {
+    return audioEngineRef.current.onSequencerStep((step: number) => {
+      setSeqCurrentStep(step);
+    });
+  }, []);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
@@ -696,131 +713,42 @@ const App: React.FC = () => {
                 />
               )}
               {panelManager.activeRightPanel === 'sequencer' && (
-                <Sequencer
+                <StepSequencer
                   steps={seqSteps}
-                  setSteps={setSeqSteps}
+                  onStepsChange={setSeqSteps}
                   bpm={seqBpm}
-                  setBpm={setSeqBpm}
+                  onBpmChange={setSeqBpm}
                   isPlaying={seqPlaying}
-                  setIsPlaying={setSeqPlaying}
+                  onPlayToggle={() => setSeqPlaying(p => !p)}
                   length={seqLength}
-                  setLength={setSeqLength}
+                  onLengthChange={setSeqLength}
                   gateLength={seqGateLength}
-                  setGateLength={setSeqGateLength}
+                  onGateLengthChange={setSeqGateLength}
                   mode={seqMode}
-                  setMode={setSeqMode}
+                  onModeChange={setSeqMode}
                   drumTracks={seqDrumTracks}
-                  setDrumTracks={setSeqDrumTracks}
+                  onDrumTracksChange={setSeqDrumTracks}
                   ccTracks={seqCCTracks}
-                  setCCTracks={setSeqCCTracks}
-                  ccLabels={ccLabels}
-                  onSequencerStep={(cb) => audioEngineRef.current.onSequencerStep(cb)}
-                  updateSequencer={(data) => audioEngineRef.current.setSequencer(data as any)}
+                  onCCTracksChange={setSeqCCTracks}
+                  currentStep={seqCurrentStep}
                 />
               )}
               {panelManager.activeRightPanel === 'keyboard' && (
-                <div>
-                  {!midiReady && (
-                    <div style={{ padding: '12px 14px', borderBottom: '1px solid #222', display: 'flex', alignItems: 'center', gap: '10px', background: '#151515' }}>
-                      <div style={{ flex: 1, fontSize: '11px', color: '#888' }}>
-                        MIDI not yet enabled — browser requires a click first.
-                      </div>
-                      <button
-                        onClick={handleEnableMIDI}
-                        style={{ background: 'var(--accent-primary)', color: '#000', border: 'none', borderRadius: '3px', padding: '5px 12px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer', letterSpacing: '0.5px', textTransform: 'uppercase', flexShrink: 0 }}
-                      >
-                        Enable MIDI
-                      </button>
-                    </div>
-                  )}
-                  <VirtualMIDI
-                    onCC={(cc, val) => audioEngineRef.current.sendControlChange(cc, val, 0)}
-                    onNoteOn={(note, vel) => audioEngineRef.current.sendNoteOn(note, vel, 0)}
-                    onNoteOff={(note) => audioEngineRef.current.sendNoteOff(note, 0)}
-                    ccLabels={ccLabels}
-                    initialState={audioEngineRef.current.getLiveState()}
-                  />
-                </div>
+                <VirtualKeyboard
+                  onNoteOn={(note, vel) => audioEngineRef.current.sendNoteOn(note, vel, 0)}
+                  onNoteOff={(note) => audioEngineRef.current.sendNoteOff(note, 0)}
+                  onCC={(cc, val) => audioEngineRef.current.sendControlChange(cc, val, 0)}
+                  ccLabels={ccLabels}
+                />
               )}
               {panelManager.activeRightPanel === 'inputs' && (
-                <div style={{ padding: 12 }}>
-                  <div className="input-strips">
-                    {inputs.map((input, i) => (
-                      <div key={i} className="input-strip" style={{ position: 'relative' }}>
-                        <div className="strip-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontWeight: 'bold', fontSize: '11px', letterSpacing: '0.5px', color: 'var(--accent-primary)', textShadow: '0 0 5px rgba(var(--accent-primary-rgb),0.4)' }}>
-                            {input.name.toUpperCase()}
-                          </span>
-                          {(input.type === 'impulse' || input.type === 'step') && (
-                            <button onClick={() => audioEngineRef.current.triggerGenerator(i)} style={{ background: 'rgba(var(--accent-primary-rgb),0.1)', border: '1px solid rgba(var(--accent-primary-rgb),0.3)', borderRadius: '4px', cursor: 'pointer', padding: '2px 6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <Zap size={10} color="var(--accent-primary)" />
-                            </button>
-                          )}
-                        </div>
-                        <select value={input.type} onChange={(e) => updateInput(i, { type: e.target.value as SourceType })} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary-bright)', fontSize: '10px', padding: '4px', borderRadius: '4px', width: '100%', outline: 'none' }}>
-                          <option value="cv">DC / Constant</option>
-                          <option value="lfo">LFO</option>
-                          <option value="oscillator">Audio Osc</option>
-                          <option value="live">Live Audio In</option>
-                          <option value="sample">Sample Playback</option>
-                          <option value="impulse">Impulse (Trigger)</option>
-                          <option value="test_noise">Noise Generator</option>
-                        </select>
-                        <div className="strip-controls" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.2)', borderRadius: '6px', padding: '8px 4px', marginTop: '4px', minHeight: '100px' }}>
-                          {input.type === 'oscillator' && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', alignItems: 'center' }}>
-                              <select value={input.oscType} onChange={(e) => updateInput(i, { oscType: e.target.value as any })} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', color: 'var(--accent-cyan)', fontSize: '9px', padding: '2px 4px', borderRadius: '4px', outline: 'none', width: '90%', textAlign: 'center' }}>
-                                <option value="sine">SINE</option><option value="sawtooth">SAW</option><option value="square">SQUARE</option><option value="triangle">TRI</option>
-                              </select>
-                              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                                <Knob label="FREQ" value={input.freq} min={0.1} max={20000} onChange={(val) => updateInput(i, { freq: val })} size={32} color="#00ffcc" isFloat />
-                              </div>
-                            </div>
-                          )}
-                          {input.type === 'lfo' && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', alignItems: 'center' }}>
-                              <select value={input.lfoShape || 'sine'} onChange={(e) => updateInput(i, { lfoShape: e.target.value as any })} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', color: 'var(--accent-primary)', fontSize: '9px', padding: '2px 4px', borderRadius: '4px', outline: 'none', width: '90%', textAlign: 'center' }}>
-                                <option value="sine">SINE</option><option value="triangle">TRI</option><option value="square">SQUARE</option><option value="sawtooth">SAW</option>
-                              </select>
-                              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                                <Knob label="RATE" value={input.lfoRate || 1} min={0.1} max={50} onChange={(val) => updateInput(i, { lfoRate: val })} size={28} color="var(--accent-primary)" isFloat />
-                                <Knob label="DEPTH" value={input.lfoDepth || 1} min={0} max={10} onChange={(val) => updateInput(i, { lfoDepth: val })} size={28} color="#ff4444" isFloat />
-                              </div>
-                            </div>
-                          )}
-                          {input.type === 'cv' && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
-                              <Knob label="VALUE" value={input.value} min={0} max={1} isFloat={true} onChange={(val) => updateInput(i, { value: val })} size={40} color="var(--accent-primary)" />
-                            </div>
-                          )}
-                          {input.type === 'sample' && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center' }}>
-                              <div style={{ display: 'flex', gap: '6px' }}>
-                                <input type="file" accept="audio/*" onChange={(e) => e.target.files && handleSampleUpload(i, e.target.files[0])} style={{ display: 'none' }} id={`sample-${i}`} />
-                                <label htmlFor={`sample-${i}`} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', fontSize: '9px', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>LOAD FILE</label>
-                                <button onClick={() => audioEngineRef.current.triggerGenerator(i)} style={{ background: 'rgba(0,255,0,0.2)', border: '1px solid rgba(0,255,0,0.4)', borderRadius: '4px', cursor: 'pointer', padding: '4px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                  <Play size={10} color="#00ff00" />
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                          {input.type === 'live' && (
-                            <select value={input.deviceId} onChange={(e) => updateInput(i, { deviceId: e.target.value })} style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', fontSize: '9px', padding: '4px', borderRadius: '4px', outline: 'none', maxWidth: '90%' }}>
-                              <option value="default">Default Mic</option>
-                              {audioDevices.map(d => <option key={d.deviceId} value={d.deviceId}>{d.label || 'Input'}</option>)}
-                            </select>
-                          )}
-                          {input.type === 'impulse' && (
-                            <div style={{ color: '#666', fontSize: '9px', textAlign: 'center', fontStyle: 'italic' }}>1-sample trigger. Click header zap to fire.</div>
-                          )}
-                          {input.type === 'test_noise' && (
-                            <div style={{ color: '#00ffcc', fontSize: '9px', textAlign: 'center', fontWeight: 'bold' }}>White Noise Active</div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <InputsPanel
+                  inputs={inputs}
+                  onInputChange={updateInput}
+                  onTrigger={(idx) => audioEngineRef.current.triggerGenerator(idx)}
+                  onSampleUpload={handleSampleUpload}
+                  audioDevices={audioDevices}
+                />
               )}
               {panelManager.activeRightPanel === 'presets' && (
                 <CommunityPresetsModal
