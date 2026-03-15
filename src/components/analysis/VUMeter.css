@@ -1,0 +1,14 @@
+.vu-meter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.vu-meter__canvas {
+  border-radius: 2px;
+}
+.vu-meter__label {
+  font-size: 8px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}

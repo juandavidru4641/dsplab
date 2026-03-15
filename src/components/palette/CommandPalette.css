@@ -1,0 +1,96 @@
+.command-palette-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 20vh;
+}
+
+.command-palette-modal {
+  width: 500px;
+  max-height: 400px;
+  background: var(--bg-surface);
+  border-radius: var(--radius-panel);
+  border: 1px solid var(--border-default);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+}
+
+.command-palette-input {
+  height: 44px;
+  width: 100%;
+  background: var(--bg-base);
+  border: none;
+  border-bottom: 1px solid var(--border-default);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  padding: 0 16px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.command-palette-input::placeholder {
+  color: var(--text-muted);
+}
+
+.command-palette-list {
+  overflow-y: auto;
+  flex: 1;
+  padding: 4px 0;
+}
+
+.command-palette-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: background var(--transition-fast);
+}
+
+.command-palette-item:hover,
+.command-palette-item--selected {
+  background: var(--bg-elevated);
+}
+
+.command-palette-item--selected {
+  border-left-color: var(--accent-primary);
+}
+
+.command-palette-item-label {
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-family: var(--font-ui);
+}
+
+.command-palette-item-label mark {
+  background: none;
+  color: var(--accent-secondary);
+  font-weight: 600;
+}
+
+.command-palette-shortcut {
+  background: var(--bg-control);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
+
+.command-palette-empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-family: var(--font-ui);
+}

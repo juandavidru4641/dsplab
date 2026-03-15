@@ -1,0 +1,58 @@
+.editor-pane {
+  flex: 1;
+  background: var(--bg-surface);
+  border-radius: var(--radius-panel);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.editor-pane__tabs {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  gap: 2px;
+  flex-shrink: 0;
+  background: var(--bg-base);
+  border-radius: var(--radius-panel) var(--radius-panel) 0 0;
+}
+
+.editor-pane__tab {
+  padding: 4px 12px;
+  border-radius: var(--radius-control) var(--radius-control) 0 0;
+  font-size: var(--font-size-label);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.editor-pane__tab--active {
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border-bottom: 2px solid var(--accent-secondary);
+}
+
+.editor-pane__tab-close {
+  color: var(--text-faint);
+  font-size: 8px;
+  cursor: pointer;
+}
+
+.editor-pane__tab-close:hover {
+  color: var(--text-tertiary);
+}
+
+.editor-pane__cursor-pos {
+  margin-left: auto;
+  font-size: var(--font-size-tiny);
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+}
+
+.editor-pane__editor {
+  flex: 1;
+  min-height: 0;
+}

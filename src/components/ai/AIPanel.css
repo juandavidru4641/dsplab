@@ -1,0 +1,86 @@
+.ai-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Override LLMPane's fixed positioning when inside AIPanel */
+.ai-panel > div {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  box-shadow: none !important;
+  z-index: auto !important;
+}
+
+/* Message styling - user messages */
+.ai-panel [style*="borderLeft: 3px solid var(--accent-primary)"],
+.ai-panel [style*="border-left: 3px solid"] {
+  background: var(--bg-elevated);
+  border-radius: 8px;
+  font-size: 11px;
+}
+
+/* Code blocks */
+.ai-panel pre,
+.ai-panel code {
+  background: var(--bg-base) !important;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+/* Input area textarea */
+.ai-panel textarea {
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 8px !important;
+  padding: 8px !important;
+  color: var(--text-secondary) !important;
+}
+
+/* Settings inputs */
+.ai-panel input[type="password"],
+.ai-panel input[type="text"] {
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 6px !important;
+  color: var(--text-secondary) !important;
+}
+
+/* Tool call / function blocks */
+.ai-panel [style*="border: 1px solid rgba(255,255,255,0.05)"] {
+  background: var(--bg-base) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 4px;
+  font-size: 10px;
+}
+
+/* Header area */
+.ai-panel [style*="borderBottom: 1px solid rgba(255,255,255,0.08)"] {
+  border-bottom-color: var(--border-subtle) !important;
+}
+
+/* Send button area */
+.ai-panel [style*="borderTop: 1px solid rgba(255,255,255,0.05)"] {
+  background: var(--bg-surface) !important;
+  border-top-color: var(--border-subtle) !important;
+}
+
+/* Quick action chips */
+.ai-panel [style*="borderRadius: 16px"] {
+  background: var(--bg-elevated) !important;
+  border-color: var(--border-subtle) !important;
+}
+
+/* Hide the resize handle inside the panel */
+.ai-panel [style*="cursor: se-resize"] {
+  display: none !important;
+}

@@ -1,0 +1,64 @@
+.status-bar {
+  display: flex;
+  align-items: center;
+  height: var(--status-bar-height);
+  padding: 0 var(--space-sm);
+  background: var(--bg-surface);
+  border-radius: var(--radius-panel);
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+.status-bar__status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--font-size-tiny);
+  user-select: none;
+}
+
+.status-bar__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-bar__dot--ready {
+  background: var(--accent-secondary);
+}
+
+.status-bar__dot--compiling {
+  background: var(--accent-warning);
+}
+
+.status-bar__dot--error {
+  background: var(--accent-primary);
+}
+
+.status-bar__label {
+  color: var(--text-secondary);
+}
+
+.status-bar__metric {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-tiny);
+  color: var(--text-muted);
+  user-select: none;
+}
+
+.status-bar__spacer {
+  flex: 1;
+}
+
+.status-bar__version {
+  font-size: var(--font-size-tiny);
+  color: var(--text-faint);
+  user-select: none;
+}
+
+.status-bar__cmd {
+  font-size: var(--font-size-tiny);
+  color: var(--text-faint);
+  user-select: none;
+}

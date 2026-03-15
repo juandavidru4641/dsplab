@@ -23,7 +23,7 @@ const StateInspector: React.FC<StateInspectorProps> = ({ onStateUpdate, onProbe,
   }, [onStateUpdate]);
 
   const allKeys = Object.keys(state);
-  const filteredKeys = allKeys.filter(k => 
+  const filteredKeys = allKeys.filter(k =>
     (showAll || k.includes('mem')) && k.toLowerCase().includes(filter.toLowerCase())
   ).sort();
 
@@ -43,29 +43,29 @@ const StateInspector: React.FC<StateInspectorProps> = ({ onStateUpdate, onProbe,
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', borderLeft: '1px solid #333', overflow: 'hidden' }}>
-      <div style={{ padding: '12px', borderBottom: '1px solid #333', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <Search size={14} color="#666" />
-        <input 
-          type="text" 
-          placeholder="Filter variables..." 
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-surface)', borderLeft: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
+      <div style={{ padding: '12px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <Search size={14} color="var(--text-tertiary)" />
+        <input
+          type="text"
+          placeholder="Filter variables..."
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          style={{ flex: 1, background: 'transparent', border: 'none', color: '#fff', fontSize: '12px', outline: 'none' }}
+          style={{ flex: 1, background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: '6px', color: 'var(--text-secondary)', fontSize: '12px', outline: 'none', padding: '4px 8px', fontFamily: 'var(--font-mono)' }}
         />
-        {filter && <X size={14} color="#666" style={{ cursor: 'pointer' }} onClick={() => setFilter('')} />}
-        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: '#888', cursor: 'pointer' }}>
+        {filter && <X size={14} color="var(--text-tertiary)" style={{ cursor: 'pointer' }} onClick={() => setFilter('')} />}
+        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: 'var(--text-tertiary)', cursor: 'pointer' }}>
           <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} />
           Show All
         </label>
       </div>
-      
+
       <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '4px' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: "'Fira Code', monospace", tableLayout: 'fixed' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--font-mono)', tableLayout: 'fixed' }}>
           <thead>
-            <tr style={{ textAlign: 'left', borderBottom: '1px solid #333' }}>
-              <th style={{ fontSize: '9px', color: '#666', padding: '4px', width: '55%' }}>VAR</th>
-              <th style={{ fontSize: '9px', color: '#666', padding: '4px', textAlign: 'right' }}>VALUE</th>
+            <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border-subtle)' }}>
+              <th style={{ fontSize: '9px', color: 'var(--text-tertiary)', padding: '4px', width: '55%' }}>VAR</th>
+              <th style={{ fontSize: '9px', color: 'var(--text-tertiary)', padding: '4px', textAlign: 'right' }}>VALUE</th>
               <th style={{ width: '45px' }}></th>
             </tr>
           </thead>
@@ -76,32 +76,32 @@ const StateInspector: React.FC<StateInspectorProps> = ({ onStateUpdate, onProbe,
               const isEditing = editingKey === key;
 
               return (
-                <tr key={key} style={{ borderBottom: '1px solid #252525' }}>
-                  <td style={{ 
-                    fontSize: '9px', 
-                    color: '#aaa', 
-                    padding: '6px 4px', 
-                    whiteSpace: 'nowrap', 
-                    overflow: 'hidden', 
-                    textOverflow: 'ellipsis' 
+                <tr key={key} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                  <td style={{
+                    fontSize: '9px',
+                    color: 'var(--text-secondary)',
+                    padding: '6px 4px',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
                   }} title={key}>
                     {key}
                   </td>
-                  <td style={{ 
-                    fontSize: '9px', 
-                    color: 'var(--accent-primary)', 
-                    padding: '6px 4px', 
+                  <td style={{
+                    fontSize: '9px',
+                    color: 'var(--accent-secondary)',
+                    padding: '6px 4px',
                     textAlign: 'right',
                     overflow: 'hidden'
                   }}>
                     {isEditing ? (
-                      <input 
+                      <input
                         autoFocus
                         value={editValue}
                         onChange={(e) => setEditValue(e.target.value)}
                         onBlur={commitEdit}
                         onKeyDown={(e) => e.key === 'Enter' && commitEdit()}
-                        style={{ width: '100%', background: '#000', border: '1px solid var(--accent-primary)', color: 'var(--accent-primary)', fontSize: '9px', textAlign: 'right' }}
+                        style={{ width: '100%', background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: '4px', color: 'var(--accent-secondary)', fontSize: '9px', textAlign: 'right', padding: '2px 4px', outline: 'none' }}
                       />
                     ) : (
                       typeof val === 'number' ? val.toFixed(5) : String(val)
@@ -110,16 +110,26 @@ const StateInspector: React.FC<StateInspectorProps> = ({ onStateUpdate, onProbe,
                   <td style={{ padding: '4px', display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
                     {typeof val === 'number' && (
                       <>
-                        <Edit2 
-                          size={10} 
-                          style={{ cursor: 'pointer', color: '#444' }} 
+                        <button
+                          className="btn-ghost"
                           onClick={() => startEdit(key, val)}
-                        />
-                        <Activity 
-                          size={12} 
-                          style={{ cursor: 'pointer', color: isProbed ? '#00ff00' : '#444' }} 
+                          style={{ background: 'transparent', border: 'none', padding: '2px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                        >
+                          <Edit2
+                            size={10}
+                            style={{ color: 'var(--text-tertiary)' }}
+                          />
+                        </button>
+                        <button
+                          className="btn-ghost"
                           onClick={() => onProbe(key)}
-                        />
+                          style={{ background: 'transparent', border: 'none', padding: '2px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                        >
+                          <Activity
+                            size={12}
+                            style={{ color: isProbed ? 'var(--accent-secondary)' : 'var(--text-tertiary)' }}
+                          />
+                        </button>
                       </>
                     )}
                   </td>

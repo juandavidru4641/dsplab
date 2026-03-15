@@ -7,7 +7,11 @@ import 'prismjs/components/prism-clike'
 import 'prismjs/components/prism-c'
 import 'prismjs/components/prism-cpp'
 import 'prismjs/components/prism-javascript'
-import './index.css'
+import './styles/reset.css'
+import './styles/tokens.css'
+import './styles/global.css'
+import './styles/components.css'
+import './styles/legacy.css'
 import App from './App.tsx'
 
 createRoot(document.getElementById('root')!).render(

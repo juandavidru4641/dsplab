@@ -1,0 +1,9 @@
+::selection {
+  background: rgba(78, 205, 196, 0.3);
+  color: var(--text-primary);
+}
+
+:focus-visible {
+  outline: 1px solid var(--accent-secondary);
+  outline-offset: -1px;
+}
