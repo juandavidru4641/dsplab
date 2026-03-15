@@ -8,15 +8,14 @@ import type { VultEditorHandle } from './VultEditor';
 import ScopeView from './components/analysis/ScopeView';
 import SpectrumView from './components/analysis/SpectrumView';
 import StatsView from './components/analysis/StatsView';
-import LLMPane from './LLMPane';
+import { AIPanel } from './components/ai/AIPanel';
 import StateInspector from './StateInspector';
 import MultiScopeView from './components/analysis/MultiScopeView';
 import { VirtualKeyboard } from './components/keyboard/VirtualKeyboard';
 import { StepSequencer } from './components/sequencer/StepSequencer';
 import type { Step } from './components/sequencer/StepSequencer';
 import { InputsPanel } from './components/inputs/InputsPanel';
-import CommunityPresetsModal from './CommunityPresetsModal';
-import { useCommunityPresets, loadPresetCode } from './useCommunityPresets';
+import PresetBrowser from './components/presets/PresetBrowser';
 import JSZip from 'jszip';
 import { PRESETS } from './constants/presets';
 import { SYSTEM_PROMPT_BASE } from './constants/systemPrompt';
@@ -85,7 +84,7 @@ const App: React.FC = () => {
   const [midiInputs, setMidiInputs] = useState<any[]>([]);
   const [selectedMidiInput, setSelectedMidiInput] = useState<string>('all');
 
-  const [showCommunity, setShowCommunity] = useState(false);
+
   const [midiReady, setMidiReady] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [mobileView, setMobileView] = useState<'editor' | 'lab' | 'panels'>('editor');
@@ -103,8 +102,6 @@ const App: React.FC = () => {
   };
   const [exportStatus, setExportStatus] = useState('');
 
-  // Community presets (fetched from GitHub)
-  const { groups: communityGroups, loading: communityLoading } = useCommunityPresets();
 
   // UI States
   const [labHeight, setLabHeight] = useState(250);
@@ -732,7 +729,7 @@ const App: React.FC = () => {
               onUndock={() => panelManager.activeRightPanel && panelManager.undockPanel(panelManager.activeRightPanel)}
             >
               {panelManager.activeRightPanel === 'ai' && (
-                <LLMPane
+                <AIPanel
                   currentCode={code}
                   onUpdateCode={handleAgentUpdateCode}
                   onSetKnob={(cc, val) => audioEngineRef.current.sendControlChange(cc, val, 0)}
@@ -793,18 +790,11 @@ const App: React.FC = () => {
                 />
               )}
               {panelManager.activeRightPanel === 'presets' && (
-                <CommunityPresetsModal
-                  onClose={panelManager.closePanel}
+                <PresetBrowser
                   onLoad={(presetCode, name) => {
                     handleLoadCode(presetCode);
-                    setProjectName(name);
-                    panelManager.closePanel();
+                    if (name) setProjectName(name);
                   }}
-                  onInsert={(presetCode) => {
-                    vultEditorRef.current?.insertAtCursor(presetCode);
-                  }}
-                  communityGroups={communityGroups}
-                  communityLoading={communityLoading}
                 />
               )}
             </RightPanel>
@@ -994,21 +984,6 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {showCommunity && (
-        <CommunityPresetsModal
-          onClose={() => setShowCommunity(false)}
-          onLoad={(presetCode, name) => {
-            handleLoadCode(presetCode);
-            setProjectName(name);
-            setShowCommunity(false);
-          }}
-          onInsert={(presetCode) => {
-            vultEditorRef.current?.insertAtCursor(presetCode);
-          }}
-          communityGroups={communityGroups}
-          communityLoading={communityLoading}
-        />
-      )}
 
       <CommandPalette
         isOpen={commandPalette.isOpen}
