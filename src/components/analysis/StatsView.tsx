@@ -6,29 +6,27 @@ import './StatsView.css';
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
-interface StatsData {
-  rms: number;
-  peak: number;
-  crest: number;
-  dc: number;
-  snr: number;
-  thd: number;
-  f0: number;
-}
-
-interface DSPStats {
-  left: StatsData;
-  right: StatsData;
-  sampleRate: number;
-}
-
 interface StatsViewProps {
-  getDSPStats: () => DSPStats | null;
+  getDSPStats: () => Record<string, any> | null;
 }
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
+
+/** Parse a display string like "-12.4 dBFS" into a dB number. */
+function parseDb(s: string | undefined): number {
+  if (!s || s === '—' || s === '--') return -Infinity;
+  const m = s.match(/([-+]?\d+\.?\d*)/);
+  return m ? parseFloat(m[1]) : -Infinity;
+}
+
+/** Parse a display string like "0.03%" into a number. */
+function parsePercent(s: string | undefined): number {
+  if (!s || s === '—' || s === '--') return NaN;
+  const m = s.match(/([\d.]+)/);
+  return m ? parseFloat(m[1]) : NaN;
+}
 
 /** Convert dB value to 0-1 linear level, clamped. */
 function dbToLevel(db: number): number {
@@ -37,53 +35,53 @@ function dbToLevel(db: number): number {
   return Math.max(0, Math.min(1, level));
 }
 
-function formatDb(val: number): string {
-  if (!isFinite(val) || val <= -100) return '-inf';
-  return val.toFixed(1);
-}
-
-function formatPercent(val: number): string {
-  if (!isFinite(val)) return '--';
-  return val.toFixed(2);
-}
-
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
 const StatsView: React.FC<StatsViewProps> = ({ getDSPStats }) => {
-  const [stats, setStats] = useState<DSPStats | null>(null);
+  const [stats, setStats] = useState<Record<string, any> | null>(null);
   const intervalRef = useRef<number>(0);
 
   useEffect(() => {
-    const update = () => setStats(getDSPStats());
+    const update = () => {
+      const result = getDSPStats();
+      // Only update if we got something with data
+      if (result && Object.keys(result).length > 0) {
+        setStats(result);
+      }
+    };
     update();
     intervalRef.current = window.setInterval(update, 100);
     return () => window.clearInterval(intervalRef.current);
   }, [getDSPStats]);
 
-  const left = stats?.left;
-  const right = stats?.right;
+  // AudioEngine returns { L: { RMS: "...", Peak: "...", ... }, R: { ... }, Fs: "..." }
+  const left = stats?.L as Record<string, string> | undefined;
+  const right = stats?.R as Record<string, string> | undefined;
 
-  // Derive VU meter levels from RMS dB values
-  const leftLevel = left ? dbToLevel(left.rms) : 0;
-  const rightLevel = right ? dbToLevel(right.rms) : 0;
-  const leftPeak = left ? dbToLevel(left.peak) : 0;
-  const rightPeak = right ? dbToLevel(right.peak) : 0;
+  // Derive VU meter levels from parsed dB values
+  const leftRmsDb = parseDb(left?.RMS);
+  const rightRmsDb = parseDb(right?.RMS);
+  const leftPeakDb = parseDb(left?.Peak);
+  const rightPeakDb = parseDb(right?.Peak);
 
-  // Use left channel for stats display (primary)
-  const displayStats = left;
+  const leftLevel = dbToLevel(leftRmsDb);
+  const rightLevel = dbToLevel(rightRmsDb);
+  const leftPeak = dbToLevel(leftPeakDb);
+  const rightPeak = dbToLevel(rightPeakDb);
 
-  const rows: Array<{ label: string; value: string; good?: boolean }> = displayStats
+  // Build display rows from left channel display strings
+  const rows: Array<{ label: string; value: string; good?: boolean }> = left
     ? [
-        { label: 'RMS', value: `${formatDb(displayStats.rms)} dB` },
-        { label: 'Peak', value: `${formatDb(displayStats.peak)} dB` },
+        { label: 'RMS', value: left.RMS || '--' },
+        { label: 'Peak', value: left.Peak || '--' },
         {
           label: 'THD',
-          value: `${formatPercent(displayStats.thd)}%`,
-          good: isFinite(displayStats.thd) && displayStats.thd < 1,
+          value: left['THD+N'] || left.THD || '--',
+          good: parsePercent(left['THD+N'] || left.THD) < 1,
         },
-        { label: 'SNR', value: `${formatDb(displayStats.snr)} dB` },
+        { label: 'SNR', value: left.SNR || '--' },
       ]
     : [
         { label: 'RMS', value: '--' },
@@ -120,5 +118,5 @@ const StatsView: React.FC<StatsViewProps> = ({ getDSPStats }) => {
 };
 
 export { StatsView };
-export type { StatsViewProps, StatsData, DSPStats };
+export type { StatsViewProps };
 export default StatsView;
