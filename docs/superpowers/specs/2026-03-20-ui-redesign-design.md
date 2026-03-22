@@ -110,6 +110,41 @@ CURRENT:                              NEW (VS Code-inspired):
 | `--bg-elevated` | `#1a1a1a` | `#1a1a1a` (no change) |
 | `--bg-control` | `#242424` | `#242424` (no change) |
 
+## State Management
+
+### Panel Routing Model
+
+Split `usePanelManager` into two independent states:
+
+- **`activeSidebarPanel`**: `'inputs' | 'presets' | 'ai' | 'settings' | null`
+- **`activeBottomTab`**: `'scope' | 'spectrum' | 'stats' | 'sequencer' | 'keyboard'`
+
+Both can be active simultaneously (e.g., Inputs sidebar open while viewing Scope tab). This matches VS Code where Explorer sidebar and Terminal panel are independent.
+
+Panel ID partitioning:
+- **Sidebar panels**: `inputs`, `presets`, `ai`, `settings`
+- **Bottom tabs**: `scope`, `spectrum`, `stats`, `sequencer`, `keyboard`
+
+Activity bar click routing:
+- Code Editor icon: closes sidebar (`activeSidebarPanel = null`), calls `editor.focus()`
+- Inputs/Presets/AI/Settings icons: toggle `activeSidebarPanel`
+- Sequencer/Keyboard icons: set `activeBottomTab` to the corresponding tab (and expand bottom panel if collapsed)
+
+### Bottom Panel State
+
+- Default active tab on load: `scope`
+- Active tab persisted to localStorage (like current bottom dock height)
+- Bottom panel is collapsible: clicking the active tab's icon in activity bar when bottom panel is collapsed expands it; a collapse toggle button in the tab bar allows manual collapse
+- When collapsed, the tab bar remains visible (VS Code behavior)
+
+### Cursor Position
+
+Use a lightweight React context (`EditorCursorContext`) that `EditorPane` writes to and `StatusBar` reads from. Shape: `{ line: number, column: number }`.
+
+### Undocking
+
+Remove undocking infrastructure entirely: `undockPanel`, `dockPanel`, `undockedPanels` state, and the undock button. Clean removal, no stubs.
+
 ## Component Changes
 
 ### BottomDock → BottomPanel
@@ -117,23 +152,26 @@ CURRENT:                              NEW (VS Code-inspired):
 - Remove the current side-by-side flex layout
 - Add tab bar with tab state management
 - Render only the active tab's content (Scope, Spectrum, Stats, Sequencer, Keyboard)
-- Move tab-specific controls (CH1/CH2, trigger mode, ms/div) into the tab bar
+- Move tab-specific controls (CH1/CH2, trigger mode, ms/div) into the tab bar right side
 - Default height: 180px, min: 80px, max: 50vh
 - Keep the existing resize drag handle
+- Sequencer/Keyboard tabs: content scrolls vertically if it exceeds panel height
 
 ### RightPanel → Sidebar
 
 - Change position from right of editor to left (between activity bar and editor)
-- Remove undock button (not needed in VS Code model)
+- Remove undock button entirely
+- Fixed width: 240px (no drag-to-resize in v1 — keep it simple)
 - Keep close button (x)
 - Panel header with title
 - Scrollable body
 
 ### ActivityBar
 
-- Add tooltip attribute to each icon button
-- Brighten inactive icon color
-- Route Sequencer/Keyboard clicks to bottom panel tab activation instead of sidebar
+- Add `title` attribute to each icon button for native tooltips
+- Brighten inactive icon color (#666 instead of #555)
+- Route Sequencer/Keyboard clicks to `activeBottomTab` state
+- Route Inputs/Presets/AI/Settings clicks to `activeSidebarPanel` state
 - Add active background fill in addition to left border
 
 ### AppShell
@@ -144,7 +182,12 @@ CURRENT:                              NEW (VS Code-inspired):
 ### EditorPane
 
 - Remove cursor position display from tab bar
-- Pass cursor position up to StatusBar via props/context
+- Write cursor position to `EditorCursorContext`
+
+### StatusBar
+
+- Read cursor position from `EditorCursorContext`
+- Display "Ln {line}, Col {col}" on the right side
 
 ## Files to Modify
 
@@ -156,18 +199,23 @@ CURRENT:                              NEW (VS Code-inspired):
 - `src/components/layout/StatusBar.tsx` + `.css` — add cursor position
 - `src/components/layout/TopBar.tsx` + `.css` — grouping refinements
 
+### State:
+- `src/hooks/usePanelManager.ts` — split into sidebar + bottom tab states, remove undocking
+- `src/contexts/EditorCursorContext.tsx` — new context for cursor position
+
 ### Tokens:
 - `src/styles/tokens.css` — all color/spacing changes
 
 ### Editor:
-- `src/components/editor/EditorPane.tsx` + `.css` — remove cursor position from tab bar
+- `src/components/editor/EditorPane.tsx` + `.css` — remove cursor position from tab bar, write to context
 
 ### App orchestration:
-- `src/App.tsx` — update panel management to support sidebar vs bottom panel routing
+- `src/App.tsx` — update panel management, keyboard shortcuts (Cmd+2→Sequencer bottom tab, Cmd+3→Keyboard bottom tab), remove undocking logic
 
 ## Out of Scope
 
 - Settings panel content (separate task)
 - Mobile responsive layout changes
 - AI panel internal redesign
+- Sidebar drag-to-resize (v1 uses fixed 240px)
 - New features or functionality
